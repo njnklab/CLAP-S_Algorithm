@@ -4,7 +4,7 @@ TEMP_PATH = "./assets/temp"
 SYNTHETIC_NET_PATH = "./assets/net/synthetic"
 REAL_NET_PATH = "./assets/net/real"
 TEST_NET_PATH = "./assets/net/test"
-RESULT_PATH = "./assets/result"
+RESULT_PATH = "./assets/result/new"
 LOG_PATH = "./assets/log"
 
 # NETWORK_NODES_LIST: list[int] = [100, 1000, 10000]

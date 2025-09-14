@@ -1,14 +1,14 @@
 \begin{table}[htbp]
 \centering
-\caption{Overall Average Execution Time (seconds $\pm$ Standard Deviation) for RRMU (Baseline) and MOUI Algorithms. Times are averaged across all tested average degrees ($\langle k \rangle$) and 10 repetitions for each network type.}
+\caption{Overall Average Execution Time (seconds $\pm$ Standard Deviation) for Different Algorithms. Times are averaged across all tested average degrees ($\langle k \rangle$) and 10 repetitions for each network type.}
 \label{tab:execution_time_overall}
-\begin{tabular}{l l c c}
+\begin{tabular}{l l c c c c}
 \toprule
-N & Network Type & RRMU Time (s) & MOUI Time (s) \\
+N & Network Type & RRMU (s) & MOUI (s) & GLDE (s) & ILP (s) \\
 \midrule
-1000 & BA+BA & 0.907 $\pm$ 0.363 & 0.059 $\pm$ 0.041 \\
- & ER+BA & 0.912 $\pm$ 0.329 & 0.016 $\pm$ 0.009 \\
- & ER+ER & 0.923 $\pm$ 0.321 & 0.032 $\pm$ 0.023 \\
+1000 & BA+BA & 0.796 $\pm$ 0.316 & 0.060 $\pm$ 0.045 & 0.013 $\pm$ 0.005 & 0.737 $\pm$ 0.262 \\
+ & ER+BA & 1.137 $\pm$ 0.922 & 0.017 $\pm$ 0.009 & 0.008 $\pm$ 0.005 & 0.820 $\pm$ 0.410 \\
+ & ER+ER & 1.383 $\pm$ 1.287 & 0.034 $\pm$ 0.027 & 0.008 $\pm$ 0.005 & 0.844 $\pm$ 0.499 \\
 \bottomrule
 \end{tabular}%
 \end{table}

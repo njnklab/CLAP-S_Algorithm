@@ -9,6 +9,7 @@ from utils.plot import (
 from matching import Matching, MultiMatching
 import copy
 import os
+import time
 
 logger = setup_logger(__name__)
 
@@ -79,85 +80,72 @@ logger = setup_logger(__name__)
 
 
 def test(n=1000, k=2):
-    # generator = BAGenerator(n, 2)
-    # generator = ERGenerator(n, 2)
-    # graphs = generator.generate_networks(config.NETWORK_LAYER)
+    generator = SFGenerator(n, k)
+    generator = ERGenerator(n, k)
+    graphs = generator.generate_networks(2)
 
-    # network_type = "ER"
-    # dir = f"{network_type}_n={n}_k={k}"
-    # graphs = []
-    # for file in os.listdir(os.path.join(config.SYNTHETIC_NET_PATH, network_type, dir)):
-    #     if "base" in file or "0.1" in file:
-    #         graph = read_network(os.path.join(config.SYNTHETIC_NET_PATH, network_type, dir, file), n)
-    #         graphs.append(graph)
-
-    net_type = "ER"
-    graph1 = read_network(f"{config.SYNTHETIC_NET_PATH}/{net_type}/{net_type}_n={n}_k={k}/base.txt", n)
-    graph2 = read_network(f"{config.SYNTHETIC_NET_PATH}/{net_type}/{net_type}_n={n}_k={k}/overlap=-1.txt", n)
-    graphs = [graph1, graph2]
-
-    # graph1 = read_network(f"{config.TEST_NET_PATH}/n={n}_k={k}_1.txt", n)
-    # graph2 = read_network(f"{config.TEST_NET_PATH}/n={n}_k={k}_2.txt", n)
-    # graphs = [graph1, graph2]
-
-    # graph1 = read_network(f"{config.TEST_NET_PATH}/ap_confict_1.txt", n)
-    # graph2 = read_network(f"{config.TEST_NET_PATH}/ap_confict_2.txt", n)
+    # net_type = "ER"
+    # graph1 = read_network(f"{config.SYNTHETIC_NET_PATH}/{net_type}/{net_type}_n={n}_k={k}/base.txt", n)
+    # graph2 = read_network(f"{config.SYNTHETIC_NET_PATH}/{net_type}/{net_type}_n={n}_k={k}/overlap=-1.txt", n)
     # graphs = [graph1, graph2]
 
     matchings = []
     for i in range(len(graphs)):
         matching = Matching(graphs[i])
         matching.HK_algorithm()
-        matching.find_all_alternating_reachable_set()
         matchings.append(matching)
 
-    multi_matching = MultiMatching(matchings)
-    pre_diff_mds_1, pre_diff_mds_2, pre_union, post_union, avg_h = multi_matching.MOUI()
-    
+    moui_matching = MultiMatching(matchings)
+    rrmu_matching = copy.deepcopy(moui_matching)
+    glde_matching = copy.deepcopy(moui_matching)
+    ilp_matching = copy.deepcopy(moui_matching)
+
+    print(f"================ MOUI ================")
+    start_time = time.time()
+    pre_diff_mds_1, pre_diff_mds_2, pre_union, post_union, avg_h = moui_matching.MOUI()
+    end_time = time.time()
+    time_1 = end_time - start_time
     print(f"pre_diff_mds_1: {pre_diff_mds_1}, pre_diff_mds_2: {pre_diff_mds_2}")
     print(f"pre_union: {pre_union}, post_union: {post_union}")
     print(f"avg_h: {avg_h}")
+    
+    print(f"================ RRMU ================")
+    start_time = time.time()
+    min_union_size = rrmu_matching.RRMU()
+    end_time = time.time()
+    time_2 = end_time - start_time
+    print(f"min_union_size: {min_union_size}")
 
+    print(f"================ GLDE ================")
+    start_time = time.time()
+    union_size = glde_matching.GLDE()
+    end_time = time.time()
+    time_3 = end_time - start_time
+    print(f"union_size: {union_size}")
 
-# def test_compare(n):
-#     graph1 = read_network(f"./assets/test_net/n={n}_k=2_1.txt", n)
-#     graph2 = read_network(f"./assets/test_net/n={n}_k=2_2.txt", n)
-#     graphs = [graph1, graph2]
+    print(f"================ ILP  ================")
+    start_time = time.time()
+    union_size = ilp_matching.ILP_exact(budget_mode="auto")
+    end_time = time.time()
+    time_4 = end_time - start_time
+    print(f"union_size: {union_size}")
 
-#     matchings_1 = []
-#     for i in range(len(graphs)):
-#         matching = Matching(graphs[i])
-#         matching.HK_algorithm()
+    print("================ Time ================")
+    print(f"MOUI: {round(time_1, 3)}")
+    print(f"RRMU: {round(time_2, 3)}")
+    print(f"GLDE: {round(time_3, 3)}")
+    print(f"ILP: {round(time_4, 3)}")
 
-#         all_alternative_set = matching.find_all_alternating_reachable_set()
-#         logger.debug(f"all alternative set: {all_alternative_set}")
-#         logger.debug(f"all alternative edges: {matching.all_alternating_edges}")
-
-#         matchings_1.append(matching)
-
-#     matchings_2 = copy.deepcopy(matchings_1)
-#     matchings_3 = copy.deepcopy(matchings_1)
-
-#     multi_matching = MultiMatching(matchings_1)
-#     intersection_size_1, elapsed_time_1 = multi_matching.find_MSS_old()
-
-#     multi_matching = MultiMatching(matchings_2)
-#     intersection_size_2, elapsed_time_2 = multi_matching.find_MSS()
-
-#     multi_matching = MultiMatching(matchings_3)
-#     intersection_size_3, elapsed_time_3 = multi_matching.find_UMDS_old()
-
-#     return [intersection_size_1, intersection_size_2, intersection_size_3], [
-#         elapsed_time_1,
-#         elapsed_time_2,
-#         elapsed_time_3,
-#     ]
+    if union_size < post_union:
+        print("ILP union size is smaller than post_union!!!!")
+        exit(1)
+    
 
 
 if __name__ == "__main__":
     n = 1000
-    k = 6.0
-    for i in range(10):
+    k = 5.0
+    for i in range(20):
         test(n, k)
         print("=" * 100)
     

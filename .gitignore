@@ -2,6 +2,8 @@ assets/net/deprecated/
 assets/net/synthetic/
 assets/net/real/
 
+.vscode/
+
 ########################################
 # 操作系统通用
 ########################################
