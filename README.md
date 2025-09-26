@@ -21,7 +21,7 @@ The project is organized as follows:
 │       ├── figure/           # Figures for visualization
 │       └── *.csv             # Raw results in CSV format
 ├── utils/
-│   ├── generator.py          # Generates synthetic networks (ER, SF)
+│   ├── generator.py          # Generates synthetic networks (ER, BA, SF)
 │   ├── plot.py               # Helper functions for plotting and visualization
 │   └── utils.py              # Utility functions (e.g., reading networks)
 ├── scripts/
@@ -43,6 +43,12 @@ The project is organized as follows:
   ```bash
   pip install networkx numpy pandas matplotlib
   ```
+- For the `ILP_exact` baseline, an additional solver is required. You can install either `ortools` (recommended) or `pulp`:
+  ```bash
+  pip install ortools
+  # or
+  pip install pulp
+  ```
 
 ### Running the Code
 
@@ -54,7 +60,7 @@ python main.py
 
 This script will:
 1. Generate a synthetic two-layer network.
-2. Run CLAPS, RSU, CLAPG, MI, and ILP algorithms.
+2. Run RSU, CLAPS, CLAPG, and ILP algorithms.
 3. Print the results and execution time for each algorithm.
 
 You can modify the network parameters (number of nodes `n`, average degree `k`) at the bottom of `main.py`.
@@ -64,18 +70,18 @@ You can modify the network parameters (number of nodes `n`, average degree `k`) 
 ### 1. Read or Generate a Network
 
 #### Generate a Synthetic Network
-You can use the generators in `utils/generator.py` to create synthetic networks. The following example shows how to generate a two-layer Scale-Free (SF) network.
+You can use the generators in `utils/generator.py` to create synthetic networks. The following example shows how to generate a two-layer Erdős-Rényi (ER) network.
 
 ```python
-from utils.generator import SFGenerator
+from utils.generator import ERGenerator
 
 # Initialize a generator for a network with 1000 nodes and an average degree of 4
-generator = SFGenerator(n=1000, k=4)
+generator = ERGenerator(n=1000, k=4)
 
 # Generate a 2-layer network
 graphs = generator.generate_networks(num_layers=2)
 ```
-Supported generators include `SFGenerator` (Scale-Free), `ERGenerator` (Erdős-Rényi), and `BAGenerator` (Barabási-Albert).
+Supported generators include `ERGenerator` (Erdős-Rényi), `BAGenerator` (Barabási-Albert), and `SFGenerator` (Scale-Free).
 
 #### Read a Network from File
 You can read a network from an edge list file using the `read_network` utility.
