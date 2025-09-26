@@ -117,6 +117,7 @@ def create_output_file(result_columns, output_file_name=None):
         output_file_name = f"{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
     else:
         output_file_name = f"{output_file_name}.csv"
-    with open(os.path.join(config.RESULT_PATH, output_file_name), "w", encoding="utf-8") as output_file:
-        output_file.write(",".join(result_columns) + "\n")
+    if not os.path.exists(os.path.join(config.RESULT_PATH, output_file_name)):
+        with open(os.path.join(config.RESULT_PATH, output_file_name), "w", encoding="utf-8") as output_file:
+            output_file.write(",".join(result_columns) + "\n")
     return os.path.join(config.RESULT_PATH, output_file_name)

@@ -861,7 +861,7 @@ L 651.080181 52.948174
      </g>
     </g>
     <g id="text_14">
-     <!-- UMDS Optimization Count -->
+     <!-- UDS Optimization Count -->
      <g transform="translate(29.995313 476.161781) rotate(-90) scale(0.3 -0.3)">
       <defs>
        <path id="DejaVuSans-55" d="M 556 4666 
@@ -2588,7 +2588,7 @@ z
      </g>
     </g>
     <g id="text_29">
-     <!-- $\Delta N_D(MOUI \mid \mathcal{I})$ -->
+     <!-- $\Delta N_D(CLAPS \mid \mathcal{I})$ -->
      <g transform="translate(1692.422375 106.4) scale(0.2 -0.2)">
       <defs>
        <path id="DejaVuSans-28" d="M 1984 4856 
@@ -2760,7 +2760,7 @@ z
      </g>
     </g>
     <g id="text_30">
-     <!-- $\Delta N_D(RRMU \mid \mathcal{I})$ -->
+     <!-- $\Delta N_D(RSU \mid \mathcal{I})$ -->
      <g transform="translate(1692.422375 136.4) scale(0.2 -0.2)">
       <defs>
        <path id="DejaVuSans-Oblique-52" d="M 1613 4147 

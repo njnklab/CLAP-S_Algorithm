@@ -1,0 +1,42 @@
+\begin{table*}[!htbp]
+\caption{
+    Detailed performance comparison of \algoCLAPS\ and other algorithms on real-world networks. 
+    $|U|_0$ is the initial \UDSabbr\ size. 
+    $|U|_{\text{CLAPS}}$, $|U|_{\text{RSU}}$, $|U|_{\text{CLAPG}}$, and $|U|_{\text{ILP}}$ are the final sizes after running the respective algorithms. 
+    $\overline{h}$ is the average \CLAPabbr\ length found by \algoCLAPS.
+    $t$ is the execution time in seconds. 
+    Execution times exceeding 500 seconds are marked with '--'. 
+    ILP was not run for networks with more than 10000 nodes, also marked with '--'.
+    Cases where the algorithm could not run or the result was invalid are marked with '--'.
+}
+\label{tab:real_networks_comparison}
+\centering
+\begin{tabular}{lrrrrrrrrrr}
+\toprule
+Network Name & $|U|_0$ & $|U|_{\text{CLAP-S}}$ & $|U|_{\text{RSU}}$ & $|U|_{\text{CLAP-G}}$ & $|U|_{\text{ILP}}$ & $\overline{h}$ & $t_{\text{CLAP-S}}$ & $t_{\text{RSU}}$ & $t_{\text{CLAP-G}}$ & $t_{\text{ILP}}$ \\
+\midrule
+Arabidopsis & 6593 & 6453 & 6580 & 6467 & 6453 & 1.164 & 0.356 & 2.818 & 0.097 & 5.360 \\
+Celegans & 3143 & 3114 & 3138 & 3117 & 3114 & 1.103 & 0.017 & 0.939 & 0.010 & 0.985 \\
+Drosophila & 7383 & 7000 & 7342 & 7029 & 7000 & 1.149 & 1.850 & 3.652 & 0.401 & 11.642 \\
+HumanHIV1 & 986 & 977 & 983 & 978 & 977 & 1.111 & 0.001 & 0.154 & 0.001 & 0.294 \\
+SacchPomb & 2366 & 2267 & 2350 & 2276 & 2267 & 1.263 & 0.266 & 0.951 & 0.037 & 1.394 \\
+Rattus & 2443 & 2381 & 2438 & 2389 & 2381 & 1.177 & 0.105 & 0.791 & 0.024 & 1.006 \\
+CelegansConnectome & 61 & 55 & 59 & 58 & 55 & 1.833 & 0.009 & 0.238 & 0.000 & 0.174 \\
+YeastLandscape & 3659 & 2757 & 3620 & 2757 & 2757 & 1.018 & 3.146 & 2.790 & 3.257 & 36.507 \\
+Cannes & 421123 & - & 421079 & 419301 & - & - & - & 263.499 & 160.982 & - \\
+MLKing & 321966 & 321726 & 321945 & 321731 & - & 1.021 & 232.491 & 150.798 & 12.282 & - \\
+MoscowAthletics & 86384 & 86162 & 86359 & 86167 & - & 1.041 & 31.315 & 33.352 & 3.075 & - \\
+NYClimate & 99437 & 99154 & 99418 & 99163 & - & 1.032 & 42.636 & 44.494 & 4.197 & - \\
+NBAFinals & 741850 & - & 741810 & 741140 & - & - & - & 447.346 & 107.869 & - \\
+Sanremo & 53817 & 53491 & 53802 & 53500 & - & 1.034 & 9.916 & 30.789 & 1.955 & - \\
+UCLFinal & 672094 & - & 672072 & 671460 & - & - & - & 384.775 & 91.643 & - \\
+GravitationalWaves & 357139 & 356772 & 357102 & 356779 & - & 1.022 & 339.581 & 172.306 & 23.684 & - \\
+KrackhardtHighTech-f\&a & 2 & 2 & 2 & 2 & 2 & 0.000 & 0.000 & 0.025 & 0.000 & 0.011 \\
+KrackhardtHighTech-f\&r & 16 & 16 & 16 & 16 & 16 & 0.000 & 0.000 & 0.015 & 0.000 & 0.007 \\
+LazegaLawFirm-f\&a & 6 & 6 & 6 & 6 & 6 & 0.000 & 0.000 & 0.103 & 0.000 & 0.046 \\
+LazegaLawFirm-f\&c & 7 & 6 & 6 & 6 & 6 & 1.000 & 0.000 & 0.053 & 0.000 & 0.053 \\
+PhysiciansInnovation-f\&a & 127 & 120 & 122 & 120 & 120 & 1.000 & 0.002 & 0.062 & 0.000 & 0.050 \\
+PhysiciansInnovation-f\&d & 103 & 99 & 100 & 99 & 99 & 1.000 & 0.001 & 0.192 & 0.000 & 0.051 \\
+\bottomrule
+\end{tabular}
+\end{table*}

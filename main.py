@@ -1,151 +1,170 @@
 import config
 from utils.generator import SFGenerator, ERGenerator
 from utils.utils import read_network, setup_logger
-from utils.plot import (
-    transform_graphs,
-    visualize_networks_with_bipartite,
-    visualize_networks_with_matching_and_bipartite,
-)
 from matching import Matching, MultiMatching
 import copy
-import os
 import time
+import argparse
+import pandas as pd
 
 logger = setup_logger(__name__)
 
 
-# def test_visualize(n):
-#     # generator = ERGenerator(10, 1.5)
-#     # generator = BAGenerator(8, 1)
-#     # graphs = generator.generate_networks(config.NETWORK_LAYER)
+def get_graphs(args):
+    """
+    Generates or reads networks based on the provided arguments.
 
-#     # graph1 = read_network(f"./assets/test_net/n={n}_k=2_1.txt", n)
-#     # graph2 = read_network(f"./assets/test_net/n={n}_k=2_2.txt", n)
+    :param args: The object containing arguments parsed from the command line.
+    :return: A list of networkx.Graph objects.
+    """
+    if args.files:
+        logger.info(f"Reading networks from files: {args.files}")
+        graphs = [read_network(f, args.n) for f in args.files]
+    else:
+        if args.net_type.upper() == "SF":
+            generator = SFGenerator(args.n, args.k)
+        elif args.net_type.upper() == "ER":
+            generator = ERGenerator(args.n, args.k)
+        else:
+            raise ValueError(f"Unknown network type: {args.net_type}")
 
-#     graph1 = read_network(f"assets/test_net/16_double_test_1", n)
-#     graph2 = read_network(f"assets/test_net/16_double_test_2", n)
-#     graphs = [graph1, graph2]
+        logger.info(
+            f"Generating {args.layers}-layer {args.net_type.upper()} network (n={args.n}, k={args.k})"
+        )
+        graphs = generator.generate_networks(args.layers)
 
-#     bi_graphs = transform_graphs(graphs)
-#     visualize_networks_with_bipartite(graphs, bi_graphs)
-
-#     matched_edges_list = []
-#     mds_list = []
-#     bi_matched_edges_list = []
-#     bi_mds_list = []
-
-#     def update_maximum_matching(matching: Matching):
-#         matched_edges, mds = matching.find_maximum_matching_and_MDS()
-#         bi_matched_edges, bi_mds = matching.transform_maximum_matching_and_MDS()
-#         matched_edges_list.append(matched_edges)
-#         mds_list.append(mds)
-#         bi_matched_edges_list.append(bi_matched_edges)
-#         bi_mds_list.append(bi_mds)
-#         logger.debug(matching.get_properties())
-
-#     graphs_show = []
-#     bi_graphs_show = []
-#     matchings = []
-
-#     for i in range(len(graphs)):
-#         matching = Matching(graphs[i])
-#         matching.HK_algorithm()
-
-#         update_maximum_matching(matching)
-#         graphs_show.append(graphs[i])
-#         bi_graphs_show.append(bi_graphs[i])
-
-#         all_alternative_set = matching.find_all_alternating_reachable_set()
-#         logger.debug(f"all alternative set: {all_alternative_set}")
-#         logger.debug(f"all alternative edges: {matching.all_alternating_edges}")
-
-#         matchings.append(matching)
-
-#     matchings_2 = copy.deepcopy(matchings)
-
-#     multi_matching = MultiMatching(matchings)
-#     multi_matching.find_MSS()
-
-#     for i in range(len(matchings)):
-#         update_maximum_matching(matchings[i])
-#         graphs_show.append(graphs[i])
-#         bi_graphs_show.append(bi_graphs[i])
-
-#     multi_matching = MultiMatching(matchings_2)
-#     multi_matching.find_MSS_multi_new()
-
-#     visualize_networks_with_matching_and_bipartite(
-#         graphs_show, bi_graphs_show, matched_edges_list, bi_matched_edges_list, mds_list, bi_mds_list
-#     )
+    return graphs
 
 
-def test(n=1000, k=2):
-    generator = SFGenerator(n, k)
-    generator = ERGenerator(n, k)
-    graphs = generator.generate_networks(2)
+def run_algorithms(graphs, algorithms_to_run):
+    """
+    Runs a series of matching algorithms on the given networks.
 
-    # net_type = "ER"
-    # graph1 = read_network(f"{config.SYNTHETIC_NET_PATH}/{net_type}/{net_type}_n={n}_k={k}/base.txt", n)
-    # graph2 = read_network(f"{config.SYNTHETIC_NET_PATH}/{net_type}/{net_type}_n={n}_k={k}/overlap=-1.txt", n)
-    # graphs = [graph1, graph2]
-
+    :param graphs: A list of networkx.Graph objects.
+    :param algorithms_to_run: A list of algorithm names to run.
+    :return: A tuple containing the results DataFrame and the initial union size.
+    """
     matchings = []
-    for i in range(len(graphs)):
-        matching = Matching(graphs[i])
+    for g in graphs:
+        matching = Matching(g)
         matching.HK_algorithm()
         matchings.append(matching)
 
-    moui_matching = MultiMatching(matchings)
-    rrmu_matching = copy.deepcopy(moui_matching)
-    glde_matching = copy.deepcopy(moui_matching)
-    ilp_matching = copy.deepcopy(moui_matching)
+    # Calculate and log the initial union size
+    initial_union_size = 0
+    if len(matchings) >= 2:
+        initial_union_size = len(matchings[0].driver_nodes | matchings[1].driver_nodes)
+    elif matchings:
+        initial_union_size = len(matchings[0].driver_nodes)
+    logger.info(f"Initial Union Size: {initial_union_size}")
 
-    print(f"================ MOUI ================")
-    start_time = time.time()
-    pre_diff_mds_1, pre_diff_mds_2, pre_union, post_union, avg_h = moui_matching.MOUI()
-    end_time = time.time()
-    time_1 = end_time - start_time
-    print(f"pre_diff_mds_1: {pre_diff_mds_1}, pre_diff_mds_2: {pre_diff_mds_2}")
-    print(f"pre_union: {pre_union}, post_union: {post_union}")
-    print(f"avg_h: {avg_h}")
-    
-    print(f"================ RRMU ================")
-    start_time = time.time()
-    min_union_size = rrmu_matching.RRMU()
-    end_time = time.time()
-    time_2 = end_time - start_time
-    print(f"min_union_size: {min_union_size}")
+    results = []
 
-    print(f"================ GLDE ================")
-    start_time = time.time()
-    union_size = glde_matching.GLDE()
-    end_time = time.time()
-    time_3 = end_time - start_time
-    print(f"union_size: {union_size}")
+    # Define all available algorithms.
+    # Each entry is a tuple: (function, result_key)
+    # The result_key is used to extract the main result from the returned dictionary.
+    available_algorithms = {
+        "CLAPS": (lambda m: m.CLAPS(), "post_union"),
+        "RSU": (lambda m: m.RSU(), "min_union_size"),
+        "CLAPG": (lambda m: m.CLAPG(), "union_size"),
+        "ILP": (lambda m: m.ILP_exact(budget_mode="auto"), "min_union_size"),
+    }
 
-    print(f"================ ILP  ================")
-    start_time = time.time()
-    union_size = ilp_matching.ILP_exact(budget_mode="auto")
-    end_time = time.time()
-    time_4 = end_time - start_time
-    print(f"union_size: {union_size}")
+    for name in algorithms_to_run:
+        if name not in available_algorithms:
+            logger.warning(f"Algorithm '{name}' not found, skipping.")
+            continue
 
-    print("================ Time ================")
-    print(f"MOUI: {round(time_1, 3)}")
-    print(f"RRMU: {round(time_2, 3)}")
-    print(f"GLDE: {round(time_3, 3)}")
-    print(f"ILP: {round(time_4, 3)}")
+        multi_matching = MultiMatching(copy.deepcopy(matchings))
+        algorithm_func, result_key = available_algorithms[name]
 
-    if union_size < post_union:
-        print("ILP union size is smaller than post_union!!!!")
-        exit(1)
-    
+        logger.info(f"================ Running {name} ================")
+        start_time = time.time()
+        result_dict = algorithm_func(multi_matching)
+        end_time = time.time()
+        execution_time = end_time - start_time
+
+        # Extract the main metric from the result dictionary.
+        # For CLAPS, we care about post_union.
+        # For RSU, CLAPG, MI, ILP, we care about the union size.
+        if name == "CLAPS":
+            main_result = result_dict[3]  # post_union
+        else:
+            main_result = result_dict
+
+        logger.info(f"Result: {main_result}")
+        logger.info(f"Execution time: {execution_time:.3f} seconds")
+
+        results.append(
+            {
+                "Algorithm": name,
+                "Union Size": main_result,
+                "Time (s)": round(execution_time, 3),
+            }
+        )
+
+    return pd.DataFrame(results), initial_union_size
+
+
+def main():
+    """
+    Main function: parses command-line arguments, runs experiments, and prints results.
+    """
+    parser = argparse.ArgumentParser(
+        description="Run Overlapping Community Matching algorithms.",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    # Network parameters
+    parser.add_argument(
+        "-n", type=int, default=500, help="Number of nodes in the network."
+    )
+    parser.add_argument(
+        "-k", type=float, default=3.0, help="Average degree for network generation."
+    )
+    parser.add_argument(
+        "--net_type",
+        type=str,
+        default="ER",
+        choices=["ER", "SF"],
+        help="Type of network to generate (Erdos-Renyi or Scale-Free).",
+    )
+    parser.add_argument(
+        "--layers", type=int, default=2, help="Number of network layers to generate."
+    )
+    parser.add_argument(
+        "--files",
+        nargs="+",
+        help="List of network file paths to read (overrides network generation).\nExample: --files assets/net/real/A.txt assets/net/real/B.txt",
+    )
+
+    # Algorithm selection
+    parser.add_argument(
+        "--algos",
+        nargs="+",
+        default=["CLAPS", "RSU", "CLAPG", "ILP"],
+        help='List of algorithms to run.\nAvailable: CLAPS, RSU, CLAPG, ILP.\nExample: --algos CLAPS RSU',
+    )
+
+    args = parser.parse_args()
+
+    try:
+        # 1. Get networks
+        graphs = get_graphs(args)
+
+        # 2. Run algorithms
+        results_df, initial_union_size = run_algorithms(graphs, [algo.upper() for algo in args.algos])
+
+        # 3. Display results
+        print("\n================ Experiment Results ================")
+        print(f"Initial Union Size: {initial_union_size}")
+        print(results_df.to_string(index=False))
+        print("=" * 40)
+
+    except (ValueError, FileNotFoundError) as e:
+        logger.error(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
-    n = 1000
-    k = 5.0
-    for i in range(20):
-        test(n, k)
-        print("=" * 100)
+    main()
     

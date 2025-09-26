@@ -830,7 +830,7 @@ L 642.299329 76.27125
      </g>
     </g>
     <g id="text_13">
-     <!-- UMDS Optimization Count -->
+     <!-- UDS Optimization Count -->
      <g transform="translate(25.43625 298.441875) rotate(-90) scale(0.24 -0.24)">
       <defs>
        <path id="DejaVuSans-55" d="M 556 4666 
@@ -2315,7 +2315,7 @@ z
      </g>
     </g>
     <g id="text_26">
-     <!-- MOUI (Mean) -->
+     <!-- CLAPS (Mean) -->
      <g transform="translate(1056.7895 82.02875) scale(0.16 -0.16)">
       <defs>
        <path id="DejaVuSans-49" d="M 628 4666 
@@ -2357,7 +2357,7 @@ z
      </g>
     </g>
     <g id="text_27">
-     <!-- RRMU (Mean) -->
+     <!-- RSU (Mean) -->
      <g transform="translate(1056.7895 105.51375) scale(0.16 -0.16)">
       <use xlink:href="#DejaVuSans-52"/>
       <use xlink:href="#DejaVuSans-52" x="69.482422"/>

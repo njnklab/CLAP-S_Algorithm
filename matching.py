@@ -44,6 +44,34 @@ class NodeState:
 
 
 class Matching:
+    """
+    Represents a matching in a directed graph and provides methods to find and manipulate it.
+
+    This class uses a variant of the Hopcroft-Karp algorithm to find a maximum matching
+    in a directed graph, which is treated as a bipartite graph where edges go from a set of
+    source nodes (U) to a set of destination nodes (V), and U and V are the same set of nodes.
+
+    Attributes
+    ----------
+    graph : nx.DiGraph
+        The directed graph on which the matching is performed.
+    markedSrc : dict
+        A mapping from a source node `u` to the destination node `v` it is matched with.
+        If `markedSrc[u] == 0`, `u` is unmatched from the source side (a tail node).
+    markedDes : dict
+        A mapping from a destination node `v` to the source node `u` it is matched with.
+        If `markedDes[v] == 0`, `v` is unmatched from the destination side (a driver node).
+    driver_nodes : set
+        The set of unmatched destination nodes (MDS - Minimum Dominating Set equivalent).
+    tail_nodes : set
+        The set of unmatched source nodes.
+    all_driver_nodes : list
+        A temporary list of all possible driver nodes, used during the BFS phase of HK algorithm.
+    all_alternating_set : dict
+        A cache mapping a driver node to its alternating reachable set.
+    all_alternating_edges : dict
+        A cache mapping a driver node to the edges forming the alternating paths from it.
+    """
     def __init__(self, graph: nx.DiGraph):
         self.graph = graph
         # the current maximum matching.
@@ -60,6 +88,7 @@ class Matching:
         self.all_alternating_edges = {}
 
     def get_properties(self):
+        """Returns a dictionary containing the current state of the matching."""
         return {
             "graph": self.graph,
             "markedSrc": self.markedSrc,
@@ -73,6 +102,13 @@ class Matching:
 
     @timer
     def HK_algorithm(self):
+        """
+        Executes the Hopcroft-Karp algorithm to find a maximum matching in the graph.
+
+        This method iteratively finds augmenting paths using BFS and DFS phases
+        and updates the matching until no more augmenting paths can be found.
+        After finding the matching, it identifies the driver and tail nodes.
+        """
 
         self.distSrc = {}
         self.distDes = {}
@@ -89,11 +125,29 @@ class Matching:
         self.update_driver_and_tail_nodes()
 
     def update_driver_and_tail_nodes(self):
+        """
+        Updates the sets of driver and tail nodes based on the current matching.
+
+        A driver node is a node that is not matched as a destination.
+        A tail node is a node that is not matched as a source.
+        """
 
         self.driver_nodes = set([node for node, matched in self.markedDes.items() if matched == 0])
         self.tail_nodes = set([node for node, matched in self.markedSrc.items() if matched == 0])
 
     def _bfs(self):
+        """
+        The BFS phase of the Hopcroft-Karp algorithm.
+
+        It builds layers of augmenting paths starting from all unmatched destination
+        nodes (driver nodes). It computes distances from these drivers to other nodes
+        along alternating paths.
+
+        Returns
+        -------
+        bool
+            True if at least one augmenting path is found, False otherwise.
+        """
 
         flag = False
         self.all_driver_nodes.clear()
@@ -121,6 +175,23 @@ class Matching:
         return flag
 
     def _dfs(self, node):
+        """
+        The DFS phase of the Hopcroft-Karp algorithm.
+
+        It searches for an augmenting path from a given node `node` using the
+        distance information computed by the BFS phase. If a path is found,
+        it updates the matching along this path.
+
+        Parameters
+        ----------
+        node : int | str
+            The node to start the DFS from.
+
+        Returns
+        -------
+        bool
+            True if an augmenting path was found and the matching was updated, False otherwise.
+        """
 
         for src, _ in self.graph.in_edges(node):
             if self.distSrc[src] == self.distDes[node] + 1:
@@ -132,6 +203,23 @@ class Matching:
         return False
 
     def find_alternating_reachable_set(self, driver):
+        """
+        Finds the set of nodes reachable from a given driver node via an alternating path.
+
+        An alternating path is a path that alternates between edges not in the matching
+        and edges in the matching. This set represents potential new driver nodes if the
+        matching is reconfigured.
+
+        Parameters
+        ----------
+        driver : int | str
+            The driver node to start the search from.
+
+        Returns
+        -------
+        set
+            The set of nodes reachable from the driver via alternating paths.
+        """
 
         visited_nodes = set()
         alternating_set = set()
@@ -160,6 +248,24 @@ class Matching:
         return alternating_set
 
     def find_reversal_alternating_reachable_set(self, matched):
+        """
+        Finds a set of potential driver nodes by exploring alternating paths in reverse.
+
+        Starting from a matched node, this method follows the matching edge backward
+        and then explores forward along non-matching edges to find other nodes that
+        could become drivers. This is used in the context of two-layer networks
+        where a matched node in one layer might be a driver in another.
+
+        Parameters
+        ----------
+        matched : int | str
+            A node that is currently matched as a destination.
+
+        Returns
+        -------
+        set
+            A set of nodes that can become drivers through a reversal alternating path.
+        """
 
         visited_nodes = set()
         reversal_alternating_set = set()
@@ -185,6 +291,25 @@ class Matching:
 
     @deprecated
     def find_alternating_exclude_set(self, driver, new_driver):
+        """
+        (Deprecated) Finds the set of nodes in the alternating path between a driver and a new driver.
+
+        This method was intended to identify the specific nodes involved in an
+        augmenting path that would make `new_driver` the new driver, excluding
+        other reachable nodes.
+
+        Parameters
+        ----------
+        driver : int | str
+            The original driver node.
+        new_driver : int | str
+            The target new driver node from the alternating reachable set.
+
+        Returns
+        -------
+        set
+            The set of nodes on the specific alternating path.
+        """
 
         self.find_alternating_reachable_set(driver)
 
@@ -204,6 +329,18 @@ class Matching:
 
     @timer
     def find_all_alternating_reachable_set(self):
+        """
+        Finds and caches the alternating reachable sets for all current driver nodes.
+
+        This method iterates through all driver nodes and computes their respective
+        alternating reachable sets, using a cache to avoid redundant computations
+        for nodes that are reachable from multiple drivers.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping each driver node to its alternating reachable set.
+        """
 
         visited_nodes = set()
         cache = {}  # To cache results for nodes visited by other drivers
@@ -245,6 +382,20 @@ class Matching:
         return self.all_alternating_set
 
     def update_matching(self, driver, new_driver):
+        """
+        Updates the matching by augmenting along the alternating path from `driver` to `new_driver`.
+
+        This operation effectively makes `new_driver` a driver node and `driver` a matched node
+        by flipping the status of edges along the unique alternating path between them.
+
+        Parameters
+        ----------
+        driver : int | str
+            The original driver node.
+        new_driver : int | str
+            The node that will become the new driver. It must be in the alternating
+            reachable set of `driver`.
+        """
 
         current_node = new_driver
         pre_source_node = 0
@@ -277,12 +428,42 @@ class Matching:
 
 
 class MultiMatching:
+    """
+    Manages and optimizes matchings across multiple network layers.
+
+    This class holds a list of `Matching` objects, one for each layer of a
+    multilayer network. It provides algorithms to analyze and minimize the
+    discrepancy between the driver node sets (MDS) of different layers.
+
+    Attributes
+    ----------
+    matchings : List[Matching]
+        A list of `Matching` objects, where each object corresponds to a layer.
+    """
     def __init__(self, matchings: List[Matching]):
         # Storing a list of Matching objects
         self.matchings = matchings
 
     @staticmethod
     def print_info(mds_list, phase):
+        """
+        Logs statistics about the driver node sets (MDS) of two layers.
+
+        Calculates and prints the size of the union, intersection, and differences
+        of the two MDS sets for diagnostic purposes.
+
+        Parameters
+        ----------
+        mds_list : list[set]
+            A list containing two sets of driver nodes.
+        phase : str
+            A label for the current stage of the algorithm (e.g., "start", "end").
+
+        Returns
+        -------
+        tuple[int, int]
+            A tuple containing the size of the union and intersection.
+        """
         intersection = set.intersection(*mds_list)
         union = set.union(*mds_list)
         logger.debug("=" * 50)
@@ -293,26 +474,56 @@ class MultiMatching:
         return len(union), len(intersection)
 
     class Layer(Enum):
+        """Enumeration for the two layers of the network."""
         One = 1
         Two = 2
 
         def toggle(self):
+            """Switches between Layer.One and Layer.Two."""
             return MultiMatching.Layer.Two if self == MultiMatching.Layer.One else MultiMatching.Layer.One
 
     class NodeType(Enum):
+        """(Not actively used) Enumeration for node types based on driver status."""
         # is driver node in both layer
         BothDriver = 0
         # is matched node in both layer
         BothMatched = 1
 
         def toggle(self):
+            """Switches between NodeType.BothDriver and NodeType.BothMatched."""
             return (
                 MultiMatching.NodeType.BothMatched
                 if self == MultiMatching.NodeType.BothDriver
                 else MultiMatching.NodeType.BothDriver
             )
 
-    def MOUI(self, max_clap_length=0):
+    def CLAPS(self, max_clap_length=0):
+        """
+        Controllability-based Layer-Aware Path Searching (CLAPS) algorithm.
+
+        This algorithm attempts to reduce the symmetric difference between the driver
+        node sets of two layers by finding and executing "exchange chains" (CLAPs).
+        A CLAP is a sequence of alternating path augmentations across both layers
+        that swaps a driver node from the symmetric difference of one layer with a
+        driver node from the symmetric difference of the other.
+
+        Parameters
+        ----------
+        max_clap_length : int, optional
+            The maximum allowed length of an exchange chain. If `> 0`, the search
+            for chains is depth-limited, which may result in an approximate solution.
+            Defaults to 0 (unlimited depth).
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - pre_diff_mds_1_size (int): Initial size of `D1 \\ D2`.
+            - pre_diff_mds_2_size (int): Initial size of `D2 \\ D1`.
+            - pre_union_size (int): Initial size of `D1 U D2`.
+            - union_size (int): Final size of `D1 U D2`.
+            - average_depth (float): Average length of the CLAPs found.
+        """
         assert len(self.matchings) == 2, f"The input can only be a two-layer network, current {len(self.matchings)}"
 
         def bfs_traverse(current_layer: MultiMatching.Layer, hierarchy_nodes_num, traverse_queue: deque):
@@ -418,8 +629,25 @@ class MultiMatching:
     
     def _collect_unique_mds(self, matcher: Matching, K: int, tries_factor: int = 5) -> list[set]:
         """
-        从同一层多次运行 HK_algorithm 采样最多 K 个“互异”的 MDS（以 driver_nodes 记）。
-        为避免浪费，若重复太多，最多尝试 K*tries_factor 次。
+        Samples up to K unique Maximum Driver Sets (MDS) from a single layer.
+
+        It repeatedly runs the HK_algorithm and collects distinct sets of driver nodes.
+        To avoid excessive computation, it stops after `K * tries_factor` attempts
+        if K unique sets are not found.
+
+        Parameters
+        ----------
+        matcher : Matching
+            The `Matching` object for the layer.
+        K : int
+            The target number of unique MDS to collect.
+        tries_factor : int, optional
+            A multiplier for the maximum number of trials. Defaults to 5.
+
+        Returns
+        -------
+        list[set]
+            A list of unique driver node sets.
         """
         seen: set[frozenset] = set()
         mds_list: list[set] = []
@@ -436,7 +664,19 @@ class MultiMatching:
 
     def _sets_to_bitmasks(self, sets: list[set]) -> tuple[list[int], dict]:
         """
-        将若干节点集合转成位掩码（Python int）。返回 (bitmasks, node2idx)。
+        Converts a list of node sets into bitmasks for efficient set operations.
+
+        It first creates a unified index mapping for all nodes present in the sets.
+
+        Parameters
+        ----------
+        sets : list[set]
+            A list of node sets.
+
+        Returns
+        -------
+        tuple[list[int], dict]
+            A tuple containing the list of bitmasks and the node-to-index mapping.
         """
         # 建立全集映射（两个层的节点并集即可——上层调用确保传同一映射）
         all_nodes = set()
@@ -452,7 +692,21 @@ class MultiMatching:
         return bitmasks, node2idx
 
     def _build_shared_index(self, sets1: list[set], sets2: list[set]) -> dict:
-        """从两层所有候选的并集构造统一的 node->bit 索引。"""
+        """
+        Creates a unified node-to-index mapping from the union of all nodes in two collections of sets.
+
+        Parameters
+        ----------
+        sets1 : list[set]
+            First collection of node sets.
+        sets2 : list[set]
+            Second collection of node sets.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping each unique node to an integer index.
+        """
         all_nodes = set()
         for s in sets1:
             all_nodes |= s
@@ -461,6 +715,21 @@ class MultiMatching:
         return {node: i for i, node in enumerate(sorted(all_nodes))}
 
     def _sets_to_bitmasks_with_map(self, sets: list[set], node2idx: dict) -> list[int]:
+        """
+        Converts a list of node sets to bitmasks using a predefined node-to-index map.
+
+        Parameters
+        ----------
+        sets : list[set]
+            The list of node sets to convert.
+        node2idx : dict
+            The predefined mapping from nodes to integer indices.
+
+        Returns
+        -------
+        list[int]
+            A list of integer bitmasks.
+        """
         masks: list[int] = []
         for s in sets:
             mask = 0
@@ -471,15 +740,33 @@ class MultiMatching:
             masks.append(mask)
         return masks
 
-    def RRMU(self, K: int = 20, tries_factor: int = 5) -> int:
+    def RSU(self, K: int = 20, tries_factor: int = 5) -> int:
         """
-        精确版 RRMU：采样去重 + 位集 + 剪枝。与原 RRMU 等价但速度显著提升。
-        - 仍各层至多采样 K 个（若互异不足则以实际唯一数为准）
-        - 完全枚举两层候选对，但使用下界剪枝与有序遍历
-        - 使用 Python int 位运算计算 |A ∪ B|（(maskA | maskB).bit_count()）
+        Finds the minimum union size of driver sets using a Randomized Sampling and Union approach.
+
+        This method provides a fast and exact solution for the minimum union problem.
+        It works by:
+        1. Sampling up to `K` unique Maximum Driver Sets (MDS) from each of the two layers.
+        2. Converting these sets to bitmasks for highly efficient computation.
+        3. Performing an exhaustive search over all pairs of sampled MDS from the two layers.
+        4. Using bitwise operations to calculate the union size and find the minimum.
+        The search is optimized with pruning based on a running lower bound.
+
+        Parameters
+        ----------
+        K : int, optional
+            The number of unique MDS to sample from each layer. Defaults to 20.
+        tries_factor : int, optional
+            A multiplier for the sampling trials, to avoid excessive runs if unique
+            MDS are rare. Defaults to 5.
+
+        Returns
+        -------
+        int
+            The minimum possible size of the union of driver sets `|D1 U D2|`.
         """
         if len(self.matchings) != 2:
-            raise ValueError("RRMU requires exactly two layers.")
+            raise ValueError("RSU requires exactly two layers.")
         m1, m2 = self.matchings
 
         # 采样互异候选（同你现有 _collect_unique_mds）
@@ -540,19 +827,31 @@ class MultiMatching:
         return int(best)
         
 
-    def GLDE(self, max_steps: Optional[int] = None, randomize: bool = True) -> int:
+    def CLAPG(self, max_steps: Optional[int] = None, randomize: bool = True) -> int:
         """
-        Greedy Local Driver Exchange (单步贪心基线).
-        在任一层寻找“单段(segment)”可行的驱动交换 (u -> v)，并且确保立刻减少 |D1 ∪ D2|。
-        规则（等价充要）：
-          - 若在第1层：u ∈ DD1 (= D1 \ D2)，选择 v ∈ D2 且 v 可被该层的交替路证实可达，则 |U| 降 1。
-          - 若在第2层：u ∈ DD2 (= D2 \ D1)，选择 v ∈ D1 且 v 可被第2层可达，则 |U| 降 1。
-        不断执行直到无改进或达到 max_steps。
+        A greedy algorithm for minimizing the driver set union via single-step exchanges.
+
+        This method, "CLAP Greedy" (CLAPG), iteratively performs the most straightforward
+        form of driver exchange. In each step, it looks for a driver node `u` in the
+        symmetric difference of one layer (`D1 \\ D2` or `D2 \\ D1`) and an alternating
+        path that leads to a node `v` that is a driver in the *other* layer.
+        If such a pair `(u, v)` is found, the matching is updated, which is guaranteed
+        to reduce the union size by one. The process repeats until no such single-step
+        improvement can be found or `max_steps` is reached.
+
+        Parameters
+        ----------
+        max_steps : Optional[int], optional
+            The maximum number of greedy steps to perform. If None, runs until convergence.
+            Defaults to None.
+        randomize : bool, optional
+            If True, shuffles the order of driver nodes to try, which can help escape
+            local minima in some cases. Defaults to True.
 
         Returns
         -------
         int
-            最终的 |D1 ∪ D2|.
+            The final size of the union of driver sets `|D1 U D2|` after the greedy process.
         """
         assert len(self.matchings) == 2, "GLE only supports duplex."
         matcher_1, matcher_2 = self.matchings
@@ -610,7 +909,7 @@ class MultiMatching:
 
     def ILP_exact(
             self,
-            n_max: int = 5000,
+            n_max: int = 10000,
             time_limit: Optional[float] = None,
             prefer: str = "ortools",
             budget_mode: str = "fixed",
@@ -619,34 +918,47 @@ class MultiMatching:
             tighten_union: bool = True,
         ) -> int:
         """
-        小规模精确 ILP 基线（双层、固定或可选预算、最小化 |D1∪D2|）。
+        Finds the exact minimum union size using an Integer Linear Programming (ILP) formulation.
+
+        This method provides a baseline for the exact optimal solution by modeling the
+        two-layer maximum matching and driver set union problem as an ILP. It is suitable
+        for small to medium-sized graphs.
 
         Parameters
         ----------
         n_max : int
-            规模阈值（N 超过时拒绝执行）。
+            A safeguard threshold. The method will raise an error if the number of nodes
+            exceeds this value. Defaults to 10000.
         time_limit : Optional[float]
-            求解时间限制（秒）；若设置且 budget_mode=="auto"，两阶段均分时间。
-        prefer : {"ortools","pulp","auto"}
-            优先求解后端；"auto" 与 "ortools" 行为一致，失败则回退 PuLP。
-        budget_mode : {"fixed","at_most","auto"}
-            - "fixed":    施加等式预算  sum_v y_ℓ(v) == kℓ
-            - "at_most":  施加不等式预算 sum_v y_ℓ(v) <= kℓ
-            - "auto":     两阶段字典序：先最小化 sum(y1)+sum(y2)，再在该面上最小化 |U|
+            An optional time limit in seconds for the ILP solver. Defaults to None.
+        prefer : {"ortools", "pulp", "auto"}
+            The preferred ILP solver backend. "ortools" is generally faster.
+            Defaults to "ortools".
+        budget_mode : {"fixed", "at_most", "auto"}
+            - "fixed": Enforces that the size of each driver set `|D_l|` must equal `k_l`.
+            - "at_most": Enforces `|D_l| <= k_l`.
+            - "auto": A two-stage optimization that first finds the minimum possible
+              driver set sizes (`k1*`, `k2*`) and then minimizes the union size
+              subject to these fixed budgets. This corresponds to finding the
+              absolute minimum union over all possible maximum matchings.
         k1, k2 : Optional[int]
-            每层预算（仅当 budget_mode!="auto" 时使用）。若为 None，使用 len(mℓ.driver_nodes)。
+            The budget for each layer's driver set size. Used only when `budget_mode`
+            is "fixed" or "at_most". If None, the size of the current driver set is used.
         tighten_union : bool
-            是否添加 z_v <= y1_v + y2_v 以收紧模型（在最小化下非必需，但有助于 MIP 性能）。
+            Whether to add redundant constraints to tighten the linear relaxation,
+            which can improve solver performance. Defaults to True.
 
         Returns
         -------
         int
-            精确最优的 |D1 ∪ D2|.
+            The exact minimum size of the union `|D1 U D2|`.
 
         Raises
         ------
-        RuntimeError / ValueError
-            当规模过大、无可用求解器或模型不满足时抛出。
+        ValueError
+            If the graph is too large or `budget_mode` is unknown.
+        RuntimeError
+            If the ILP solver fails or is not installed.
         """
         assert len(self.matchings) == 2, "ILP_exact only supports duplex."
 
@@ -778,7 +1090,7 @@ class MultiMatching:
             import pulp
 
             def _build_common_pulp():
-                prob = pulp.LpProblem("UMDS_ILP", pulp.LpMinimize)
+                prob = pulp.LpProblem("UDS_ILP", pulp.LpMinimize)
                 x1 = pulp.LpVariable.dicts("x1", E1, lowBound=0, upBound=1, cat=pulp.LpBinary)
                 x2 = pulp.LpVariable.dicts("x2", E2, lowBound=0, upBound=1, cat=pulp.LpBinary)
                 y1 = pulp.LpVariable.dicts("y1", V,  lowBound=0, upBound=1, cat=pulp.LpBinary)
@@ -867,3 +1179,297 @@ class MultiMatching:
                 f"Backend error: {e2}"
             )
 
+
+    def MI_exact(self):
+        """
+        Finds the exact minimum union size using a Matroid Intersection algorithm.
+
+        This method implements a theoretically grounded, exact algorithm based on the
+        intersection of two transversal matroids. The problem of minimizing `|D1 U D2|`
+        is equivalent to maximizing `|X1 ∩ X2|`, where `X1` and `X2` are the sets of
+        matched nodes (bases of the transversal matroids `M1` and `M2`). The algorithm finds
+        the largest common independent set `S*` of `M1` and `M2`, then extends `S*` to
+        bases `X1` and `X2` of `M1` and `M2` respectively. The final driver sets are
+        `D1 = V \\ X1` and `D2 = V \\ X2`.
+
+        This method is self-contained and does not require external solvers.
+
+        Returns
+        -------
+        dict
+            A dictionary containing detailed results of the intersection:
+            - "V": The list of all nodes.
+            - "S_common": The largest common independent set (node labels).
+            - "X1", "X2": The bases of the two matroids (sets of matched nodes).
+            - "D1", "D2": The resulting driver sets that achieve the minimum union.
+            - "min_union_size": The size of the minimum union `|D1 U D2|`.
+            - "union": The union set `D1 U D2`.
+            - "sizes": A dict with cardinalities (`n`, `mu1`, `mu2`, `d1`, `d2`, `r_common`).
+        """
+
+        assert len(self.matchings) == 2, "MI_exact only supports duplex."
+
+        # ---------- 内部依赖（保持方法内自包含） ----------
+        from collections import deque
+        from typing import List, Dict, Set, Tuple, Iterable, Optional
+
+        class _HopcroftKarp:
+            """最大匹配（左到右邻接），支持“右侧允许集”限制。"""
+            __slots__ = ("n_left", "n_right", "adj")
+
+            def __init__(self, n_left: int, n_right: int, adj: List[List[int]]):
+                self.n_left = n_left
+                self.n_right = n_right
+                self.adj = adj
+
+            def maximum_matching(
+                self,
+                allowed_right: Optional[Set[int]] = None,
+                initial_match_L: Optional[List[int]] = None,
+                initial_match_R: Optional[List[int]] = None,
+            ) -> Tuple[int, List[int], List[int]]:
+                nL, nR = self.n_left, self.n_right
+                if allowed_right is None:
+                    allowed_right = set(range(nR))
+
+                if initial_match_L is None or initial_match_R is None:
+                    matchL = [-1] * nL
+                    matchR = [-1] * nR
+                else:
+                    matchL = initial_match_L[:]
+                    matchR = initial_match_R[:]
+
+                INF = 10**9
+                dist = [INF] * nL
+
+                def bfs() -> bool:
+                    dq = deque()
+                    for u in range(nL):
+                        if matchL[u] == -1:
+                            dist[u] = 0
+                            dq.append(u)
+                        else:
+                            dist[u] = INF
+                    reachable_free = False
+                    while dq:
+                        u = dq.popleft()
+                        for v in self.adj[u]:
+                            if v not in allowed_right:
+                                continue
+                            w = matchR[v]
+                            if w == -1:
+                                reachable_free = True
+                            else:
+                                if dist[w] == INF:
+                                    dist[w] = dist[u] + 1
+                                    dq.append(w)
+                    return reachable_free
+
+                def dfs(u: int) -> bool:
+                    for v in self.adj[u]:
+                        if v not in allowed_right:
+                            continue
+                        w = matchR[v]
+                        if w == -1 or (dist[w] == dist[u] + 1 and dfs(w)):
+                            matchL[u] = v
+                            matchR[v] = u
+                            return True
+                    dist[u] = 10**9
+                    return False
+
+                matching_size = 0
+                while bfs():
+                    for u in range(nL):
+                        if matchL[u] == -1 and dfs(u):
+                            matching_size += 1
+
+                return matching_size, matchL, matchR
+
+        def _build_index(nodes: Iterable) -> Dict:
+            nodes_list = list(dict.fromkeys(nodes))
+            return {x: i for i, x in enumerate(nodes_list)}
+
+        def _build_bipartite_from_directed(
+            nodes: Iterable,
+            edges: Iterable[Tuple],
+        ) -> Tuple[_HopcroftKarp, Dict, Dict]:
+            node_to_idx = _build_index(nodes)
+            n = len(node_to_idx)
+            adj = [[] for _ in range(n)]
+            for (u, v) in edges:
+                if u not in node_to_idx or v not in node_to_idx:
+                    continue
+                ui = node_to_idx[u]
+                vi = node_to_idx[v]
+                if vi not in adj[ui]:
+                    adj[ui].append(vi)
+            hk = _HopcroftKarp(n_left=n, n_right=n, adj=adj)
+            idx_to_node = {i: x for x, i in node_to_idx.items()}
+            return hk, idx_to_node, node_to_idx
+
+        def _is_independent_transversal(hk: _HopcroftKarp, S_right: Set[int]) -> bool:
+            """S 是否可被匹配饱和（横断拟阵独立）。"""
+            if not S_right:
+                return True
+            msize, _, _ = hk.maximum_matching(allowed_right=S_right)
+            return msize == len(S_right)
+
+        def _matroid_intersection_max_common_independent(
+            ground_right: List[int],
+            indep1,
+            indep2,
+        ) -> Set[int]:
+            """朴素 Edmonds 交换图 + 最短增广路，返回最大公共独立集 I。"""
+            V = set(ground_right)
+            I = set()
+
+            # quick add
+            improved = True
+            while improved:
+                improved = False
+                for z in list(V - I):
+                    if indep1(I | {z}) and indep2(I | {z}):
+                        I.add(z)
+                        improved = True
+
+            while True:
+                X1 = {z for z in (V - I) if indep1(I | {z})}
+                X2 = {z for z in (V - I) if indep2(I | {z})}
+                inter = X1 & X2
+                if inter:
+                    I.add(next(iter(inter)))
+                    continue
+                if not X1 or not X2:
+                    break
+
+                parents = {}
+                visited_out, visited_in = set(), set()
+                q = deque()
+                for z in X1:
+                    visited_out.add(z)
+                    q.append(('out', z, None))
+
+                found = False
+                target_out = None
+                while q and not found:
+                    typ, node, par = q.popleft()
+                    parents[(typ, node)] = par
+                    if typ == 'out':
+                        z = node
+                        for y in I - visited_in:
+                            if indep2((I - {y}) | {z}):
+                                visited_in.add(y)
+                                q.append(('in', y, ('out', z)))
+                    else:
+                        y = node
+                        for zprime in (V - I) - visited_out:
+                            if indep1((I - {y}) | {zprime}):
+                                visited_out.add(zprime)
+                                q.append(('out', zprime, ('in', y)))
+                                if zprime in X2:
+                                    target_out = zprime
+                                    parents[('out', zprime)] = ('in', y)
+                                    found = True
+                                    break
+
+                if not found:
+                    break
+
+                # 回溯增广（对称差）
+                path = []
+                cur = ('out', target_out)
+                while cur is not None:
+                    path.append(cur)
+                    cur = parents.get(cur)
+                path.reverse()
+                for typ, node in path:
+                    if typ == 'out':
+                        I.add(node)
+                    else:
+                        if node in I:
+                            I.remove(node)
+
+                # 再 quick add 一次
+                improved = True
+                while improved:
+                    improved = False
+                    for z in list(V - I):
+                        if indep1(I | {z}) and indep2(I | {z}):
+                            I.add(z)
+                            improved = True
+
+            return I
+
+        def _extend_to_base(hk: _HopcroftKarp, S: Set[int]) -> Set[int]:
+            """把独立集 S 贪心扩展到某一基（匹配秩 μ）。"""
+            n = hk.n_right
+            allR = set(range(n))
+            mu, _, _ = hk.maximum_matching(allowed_right=allR)
+            X = set(S)
+            if len(X) > mu:
+                raise ValueError("S size > rank; not independent?")
+            changed = True
+            while len(X) < mu and changed:
+                changed = False
+                for z in list(allR - X):
+                    if _is_independent_transversal(hk, X | {z}):
+                        X.add(z)
+                        changed = True
+                        if len(X) == mu:
+                            break
+            if len(X) < mu:
+                raise RuntimeError("Failed to extend to a base.")
+            return X
+
+        # ---------- 从现有两层 Matching 构造并求解 ----------
+        m1, m2 = self.matchings
+        V_labels = list(set(m1.graph.nodes) | set(m2.graph.nodes))
+        E1 = list(m1.graph.edges())
+        E2 = list(m2.graph.edges())
+
+        hk1, idx_to_node, node_to_idx = _build_bipartite_from_directed(V_labels, E1)
+        hk2, _, _ = _build_bipartite_from_directed(V_labels, E2)
+        V_idx = list(range(len(node_to_idx)))
+
+        indep1 = lambda S: _is_independent_transversal(hk1, set(S))
+        indep2 = lambda S: _is_independent_transversal(hk2, set(S))
+
+        # 最大公共独立集 S*
+        S_star_idx = _matroid_intersection_max_common_independent(V_idx, indep1, indep2)
+
+        # 将 S* 各自扩展到基 X^(1), X^(2)
+        X1_idx = _extend_to_base(hk1, S_star_idx)
+        X2_idx = _extend_to_base(hk2, S_star_idx)
+
+        all_idx = set(V_idx)
+        D1_idx = all_idx - X1_idx
+        D2_idx = all_idx - X2_idx
+        union_idx = D1_idx | D2_idx
+
+        # 一些规模统计
+        mu1, _, _ = hk1.maximum_matching(allowed_right=all_idx)
+        mu2, _, _ = hk2.maximum_matching(allowed_right=all_idx)
+        n = len(V_idx)
+        d1 = n - mu1
+        d2 = n - mu2
+        r_common = len(S_star_idx)
+
+        # 反解回原标签
+        def _lab(s: Set[int]) -> Set:
+            return {idx_to_node[i] for i in s}
+
+        res = {
+            "V": [idx_to_node[i] for i in V_idx],
+            "S_common": _lab(S_star_idx),
+            "X1": _lab(X1_idx),
+            "X2": _lab(X2_idx),
+            "D1": _lab(D1_idx),
+            "D2": _lab(D2_idx),
+            "min_union_size": len(union_idx),
+            "union": _lab(union_idx),
+            "sizes": {
+                "n": n, "mu1": mu1, "mu2": mu2,
+                "d1": d1, "d2": d2, "r_common": r_common
+            }
+        }
+        return res
