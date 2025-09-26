@@ -1,6 +1,6 @@
 {
     "explorer.excludeGitIgnore": false,
     "search.exclude": {
-        "/home/a001/Documents/ZhengHaoyu/python/OCMN/assets/net/synthetic": true
+        "**/assets/net/synthetic": true
     }
 }
