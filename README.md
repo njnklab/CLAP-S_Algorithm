@@ -1,6 +1,10 @@
-# OCMN: Overlapping Community Matching in Networks
+# CLAP-S Algorithm Implementation of 「Optimized Control of Duplex Networks」
 
-This repository contains the official implementation for the paper "Overlapping Community Matching in Networks". It provides the source code for the proposed algorithms (CLAPS, CLAPG) and other baseline methods for solving the Overlapping Community Matching problem.
+Many real-world complex systems can be modeled as *multiplex* networks, where each layer represents a distinct set of interactions among the same entities. Controlling such systems is crucial, but applying separate controls to each layer often yields a redundant set of driver nodes, increasing cost and complexity.
+
+This repository contains the official implementation for the paper **"Optimized Control of Duplex Networks"**. We address this gap by formulating the Universal Minimum Driver-Node Set (MinUDS) problem for duplex networks, which seeks the smallest set of driver nodes that simultaneously control both layers. We propose a novel algorithm, **Shortest Controllability-based Layer-Aware Path Search (CLAP-S)**, that efficiently navigates the combinatorial search space of control configurations. By introducing Controllability-based Layer-Aware Paths (CLAPs), the algorithm iteratively realigns each layer’s Minimum Driver Set (MDS) to maximize their overlap.
+
+This repository provides the source code for the CLAP-S algorithm, all baselines, and the scripts to reproduce the figures and tables from the paper.
 
 ## File Structure
 
