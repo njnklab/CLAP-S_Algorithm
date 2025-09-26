@@ -61,7 +61,7 @@ python main.py
 
 This script will:
 1. Generate a synthetic two-layer network.
-2. Run RSU, CLAPS, CLAPG, and ILP algorithms.
+2. Run RSU, CLAP-S, CLAP-G, and ILP algorithms.
 3. Print the results and execution time for each algorithm.
 
 You can modify the network parameters (number of nodes `n`, average degree `k`) at the bottom of `main.py`.
@@ -135,7 +135,6 @@ The available algorithms in `MultiMatching` are:
 - `CLAPS()`: Our proposed core algorithm.
 - `CLAPG()`: Our proposed greedy algorithm.
 - `RSU()`: A baseline algorithm.
-- `MI_exact()`: An exact algorithm based on maximum independent set.
 - `ILP_exact()`: An exact algorithm using Integer Linear Programming.
 
 ### 3. Algorithm Comparison

@@ -62,7 +62,7 @@ python main.py
 
 该脚本将：
 1. 生成一个合成的双层网络。
-2. 运行RSU、CLAPS、CLAPG和ILP算法。
+2. 运行RSU、CLAP-S、CLAP-G和ILP算法。
 3. 打印每种算法的结果和执行时间。
 
 您可以在`main.py`的底部修改网络参数（节点数`n`，平均度`k`）。
@@ -136,7 +136,6 @@ glde_matching.CLAPG()
 - `CLAPS()`: 我们提出的核心算法。
 - `CLAPG()`: 我们提出的贪心算法。
 - `RSU()`: 一种基准算法。
-- `MI_exact()`: 一种基于最大独立集的精确算法。
 - `ILP_exact()`: 一种使用整数线性规划的精确算法。
 
 ### 3. 算法比较
