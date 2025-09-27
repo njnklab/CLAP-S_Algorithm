@@ -1,4 +1,5 @@
-````markdown
+**[English](README.md)** | **[中文](README_CN.md)**
+
 # 「双层网络优化控制」的CLAP-S算法实现
 
 许多现实世界的复杂系统可以被建模为*多层*网络，其中每一层代表相同实体之间的一组不同交互。控制此类系统至关重要，但对每一层分别施加控制通常会产生一组冗余的驱动节点，从而增加成本和复杂性。
@@ -149,5 +150,3 @@ glde_matching.CLAPG()
 - **`experiments.ipynb`**: 该notebook包含在合成网络上运行实验的代码，可变参数包括网络大小、密度和重叠度。它将结果保存到`assets/result/`目录。
 - **`real_networks.ipynb`**: 该notebook专门用于在`assets/net/real/`中的真实世界网络数据集上运行实验。
 - **`results.ipynb`**: 使用此notebook加载结果目录中的`.csv`文件，并生成论文中呈现的图表。它依赖于`utils/plot.py`中的绘图函数。
-
-````

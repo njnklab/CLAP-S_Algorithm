@@ -1,3 +1,5 @@
+**[English](README.md)** | **[中文](README_CN.md)**
+
 # CLAP-S Algorithm Implementation of 「Optimized Control of Duplex Networks」
 
 Many real-world complex systems can be modeled as *multiplex* networks, where each layer represents a distinct set of interactions among the same entities. Controlling such systems is crucial, but applying separate controls to each layer often yields a redundant set of driver nodes, increasing cost and complexity.
