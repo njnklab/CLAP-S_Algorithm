@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useI18n } from "@/providers/i18n-provider";
 
 import type { RealSummary, SyntheticSummary } from "@/lib/results";
 import { cn, formatCompact, formatNumber } from "@/lib/utils";
@@ -23,6 +24,7 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
   const [networkType, setNetworkType] = useState("ER+ER");
   const [domain, setDomain] = useState("All");
   const [hovered, setHovered] = useState<string | null>(null);
+  const { t } = useI18n();
 
   const syntheticTypes = Array.from(new Set(synthetic.map((item) => item.networkType)));
   const domains = ["All", ...Array.from(new Set(real.map((item) => item.domain)))];
@@ -80,7 +82,7 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
 
     const legend =
       metric === "relative"
-        ? [{ key: "claps", label: "CLAP-S over RSU" as const }]
+        ? [{ key: "claps", label: `${t("results.metric.relative")} (CLAP-S / RSU)` as any }]
         : [
           { key: "claps", label: "CLAP-S" as const },
           { key: "ilp", label: "ILP-Exact" as const },
@@ -130,10 +132,13 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
                     fill={seriesColors[key as keyof typeof seriesColors]}
                     onMouseEnter={() =>
                       setHovered(
-                        String.raw`${key.toUpperCase()} at $\langle k \rangle = ${item.degree}: ${metric === "runtime"
-                          ? `${formatNumber(series[index], 3)} s`
-                          : formatNumber(series[index], metric === "relative" ? 2 : 1)
-                        }${metric === "relative" ? "%" : ""}`
+                        t("results.hover.synthetic", {
+                          key: key.toUpperCase(),
+                          degree: item.degree,
+                          value: metric === "runtime"
+                            ? `${formatNumber(series[index], 3)} s`
+                            : formatNumber(series[index], metric === "relative" ? 2 : 1) + (metric === "relative" ? "%" : "")
+                        })
                       )
                     }
                   />
@@ -142,20 +147,22 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
             );
           })}
 
-          {filteredSynthetic.map((item) => (
-            <text
-              key={`tick-${item.degree}`}
-              x={x(item.degree)}
-              y={height - 14}
-              textAnchor="middle"
-              className="fill-ink/60 text-[11px]"
-            >
-              {item.degree}
-            </text>
-          ))}
+          {filteredSynthetic
+            .filter((item) => Number.isInteger(item.degree))
+            .map((item) => (
+              <text
+                key={`tick-${item.degree}`}
+                x={x(item.degree)}
+                y={height - 14}
+                textAnchor="middle"
+                className="fill-ink/60 text-[11px]"
+              >
+                {item.degree}
+              </text>
+            ))}
 
           <text x={width / 2} y={height - 2} textAnchor="middle" className="fill-ink/65 text-[12px]">
-            <FormatMathText text={String.raw`Average degree $\langle k \rangle$`} />
+            <FormatMathText as="tspan" text={t("results.chart.xAxis")} />
           </text>
         </svg>
         <div className="mt-5 flex flex-wrap gap-4 text-sm">
@@ -182,33 +189,44 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
     return rows.slice(0, 10);
   }, [filteredReal, metric]);
 
-  const realSummaryText =
-    metric === "absolute"
-      ? "CLAP-S reaches the same optimum as ILP where ILP is tractable, while RSU and CLAP-G usually leave a larger union."
-      : metric === "relative"
-        ? "Positive relative gain means CLAP-S improves beyond RSU. The pattern is stable across biological, social, and human relationship duplexes."
-        : metric === "runtime"
-          ? "CLAP-G is often fastest, but CLAP-S remains practical while staying exact within the paper's fixed-budget regime."
-          : "Memory usage highlights the structural advantage of path-guided updates over storing large sampled candidate pools.";
+  const activeSummaryText = useMemo(() => {
+    if (dataset === "synthetic") {
+      const keys: Record<Metric, string> = {
+        absolute: "results.summary.synthetic.absolute",
+        relative: "results.summary.synthetic.relative",
+        runtime: "results.summary.synthetic.runtime",
+        memory: "results.summary.synthetic.memory"
+      };
+      return t(keys[metric]);
+    } else {
+      const keys: Record<Metric, string> = {
+        absolute: "results.summary.real.absolute",
+        relative: "results.summary.real.relative",
+        runtime: "results.summary.real.runtime",
+        memory: "results.summary.real.memory"
+      };
+      return t(keys[metric]);
+    }
+  }, [dataset, metric, t]);
 
   return (
     <Card>
       <div className="grid gap-8 lg:grid-cols-[0.93fr_1.07fr]">
         <div className="space-y-5">
           <SurfaceTitle
-            title="Animation E · Interactive results explorer"
-            body="Switch between synthetic and real-world data, then inspect how solution quality, runtime, and memory change across network families."
+            title={t("results.animation.title")}
+            body={t("results.animation.body")}
           />
-          <div className="rounded-[24px] border border-ink/8 bg-gradient-to-br from-white to-mist/70 p-5">
+          <div className="rounded-[24px] border border-ink/8 bg-gradient-to-br from-surface to-mist/70 p-5">
             <div className="grid gap-4">
               <div>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink/55">
-                  Dataset
+                  {t("results.dataset")}
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {[
-                    ["synthetic", "Synthetic"],
-                    ["real", "Real-world"]
+                    ["synthetic", t("results.dataset.synthetic")],
+                    ["real", t("results.dataset.real")]
                   ].map(([value, label]) => (
                     <button
                       key={value}
@@ -217,8 +235,8 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
                       className={cn(
                         "rounded-full px-4 py-2 text-sm transition",
                         dataset === value
-                          ? "bg-ink text-white"
-                          : "border border-ink/10 bg-white text-ink hover:bg-ink/5"
+                          ? "bg-ink text-white dark:text-slate-900"
+                          : "border border-ink/10 bg-surface text-ink hover:bg-ink/5"
                       )}
                     >
                       {label}
@@ -228,14 +246,14 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
               </div>
               <div>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink/55">
-                  Metric type
+                  {t("results.metric")}
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {[
-                    ["absolute", "Absolute gain"],
-                    ["relative", "Relative gain"],
-                    ["runtime", "Runtime"],
-                    ["memory", "Memory"]
+                    ["absolute", t("results.metric.absolute")],
+                    ["relative", t("results.metric.relative")],
+                    ["runtime", t("results.metric.runtime")],
+                    ["memory", t("results.metric.memory")]
                   ].map(([value, label]) => (
                     <button
                       key={value}
@@ -244,8 +262,8 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
                       className={cn(
                         "rounded-full px-4 py-2 text-sm transition",
                         metric === value
-                          ? "bg-ink text-white"
-                          : "border border-ink/10 bg-white text-ink hover:bg-ink/5"
+                          ? "bg-ink text-white dark:text-slate-900"
+                          : "border border-ink/10 bg-surface text-ink hover:bg-ink/5"
                       )}
                     >
                       {label}
@@ -256,7 +274,7 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
               {dataset === "synthetic" ? (
                 <div>
                   <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink/55">
-                    Network type
+                    {t("results.networkType")}
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {syntheticTypes.map((type) => (
@@ -267,8 +285,8 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
                         className={cn(
                           "rounded-full px-4 py-2 text-sm transition",
                           networkType === type
-                            ? "bg-ink text-white"
-                            : "border border-ink/10 bg-white text-ink hover:bg-ink/5"
+                            ? "bg-ink text-white dark:text-slate-900"
+                            : "border border-ink/10 bg-surface text-ink hover:bg-ink/5"
                         )}
                       >
                         {type}
@@ -279,24 +297,33 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
               ) : (
                 <div>
                   <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink/55">
-                    Network type
+                    {t("results.networkType")}
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    {domains.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => setDomain(item)}
-                        className={cn(
-                          "rounded-full px-4 py-2 text-sm transition",
-                          domain === item
-                            ? "bg-ink text-white"
-                            : "border border-ink/10 bg-white text-ink hover:bg-ink/5"
-                        )}
-                      >
-                        {item}
-                      </button>
-                    ))}
+                    {domains.map((item) => {
+                      const keyMap: Record<string, string> = {
+                        "All": "results.domain.all",
+                        "Social & information": "results.domain.social",
+                        "Biological & neuronal": "results.domain.biological",
+                        "Human relationship": "results.domain.human"
+                      };
+                      const i18nKey = keyMap[item] || item;
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setDomain(item)}
+                          className={cn(
+                            "rounded-full px-4 py-2 text-sm transition",
+                            domain === item
+                              ? "bg-ink text-white dark:text-slate-900"
+                              : "border border-ink/10 bg-surface text-ink hover:bg-ink/5"
+                          )}
+                        >
+                          {t(i18nKey)}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -306,31 +333,31 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
           {dataset === "synthetic" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <StatCard
-                label="CLAP-S = ILP?"
+                label={t("results.stats.clapIlp")}
                 value="Yes"
-                hint="Main synthetic benchmark curves overlap"
+                hint={t("results.stats.clapIlp.hint")}
               />
               <StatCard
-                label="Average path length"
+                label={t("results.stats.avgPath")}
                 value={formatNumber(
                   filteredSynthetic.reduce((sum, item) => sum + item.avgPathLength, 0) /
                   Math.max(filteredSynthetic.length, 1),
                   2
                 )}
-                hint="Short paths indicate local conflict resolution"
+                hint={t("results.stats.avgPath.hint")}
               />
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               <StatCard
-                label="Largest network"
+                label={t("results.stats.largestNet")}
                 value={formatCompact(
                   Math.max(...filteredReal.map((item) => item.nodes), 0)
                 )}
-                hint="Nodes in current filter"
+                hint={t("results.stats.largestNet.hint")}
               />
               <StatCard
-                label="Mean path length"
+                label={t("results.stats.meanPath")}
                 value={formatNumber(
                   filteredReal
                     .filter((item) => item.avgPathLength > 0)
@@ -338,26 +365,18 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
                   Math.max(filteredReal.filter((item) => item.avgPathLength > 0).length, 1),
                   2
                 )}
-                hint="Across real-world duplexes"
+                hint={t("results.stats.meanPath.hint")}
               />
             </div>
           )}
         </div>
         <div className="space-y-5">
-          <div className="rounded-[24px] border border-ink/8 bg-white/92 p-5">
+          <div className="rounded-[24px] border border-ink/8 bg-surface/92 p-5">
             <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink/55">
-              What this chart says
+              {t("results.summary.title")}
             </div>
             <div className="text-sm leading-7 text-ink/74">
-              <FormatMathText text={dataset === "synthetic"
-                ? metric === "absolute"
-                  ? "CLAP-S and ILP overlap, which means the shortest-path construction reaches the exact optimum on the paper's synthetic benchmark."
-                  : metric === "relative"
-                    ? "Relative gain stays positive in most regimes, so CLAP-S is not just good in absolute terms; it is consistently better than random sampling."
-                    : metric === "runtime"
-                      ? "CLAP-G trades some quality for speed, while CLAP-S remains much more deliberate than sampling and avoids exact search."
-                      : "Per-method memory is not reported in the main synthetic comparison file. Switch to the real-world view to inspect measured memory footprints."
-                : realSummaryText} />
+              <FormatMathText text={activeSummaryText} />
             </div>
           </div>
           {dataset === "synthetic" ? (
@@ -368,14 +387,14 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
               </div>
             ) : (
               <div
-                className="rounded-[24px] border border-ink/8 bg-gradient-to-br from-white to-mist/70 p-5"
+                className="rounded-[24px] border border-ink/8 bg-gradient-to-br from-surface to-mist/70 p-5"
                 onMouseLeave={() => setHovered(null)}
               >
                 {syntheticChart}
               </div>
             )
           ) : (
-            <div className="rounded-[24px] border border-ink/8 bg-gradient-to-br from-white to-mist/70 p-5">
+            <div className="rounded-[24px] border border-ink/8 bg-gradient-to-br from-surface to-mist/70 p-5">
               <div className="space-y-4">
                 {rankedReal.map((item) => {
                   const isLog = metric === "runtime" || metric === "memory";
@@ -453,10 +472,14 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
                               type="button"
                               onMouseEnter={() =>
                                 setHovered(
-                                  `${item.label} · ${key.toUpperCase()}: ${formatNumber(
-                                    rawValue,
-                                    metric === "relative" ? 2 : rawValue < 10 ? 2 : 1
-                                  )}${metric === "relative" ? "%" : metric === "runtime" ? " s" : metric === "memory" ? " MiB" : ""}`
+                                  t("results.hover.real", {
+                                    label: item.label,
+                                    key: key.toUpperCase(),
+                                    value: formatNumber(
+                                      rawValue,
+                                      metric === "relative" ? 2 : rawValue < 10 ? 2 : 1
+                                    ) + (metric === "relative" ? "%" : metric === "runtime" ? " s" : metric === "memory" ? " MiB" : "")
+                                  })
                                 )
                               }
                               className="flex w-full items-center gap-3"
@@ -464,7 +487,7 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
                               <div className="w-16 text-left text-xs uppercase tracking-[0.16em] text-ink/58">
                                 {key}
                               </div>
-                              <div className="h-3 flex-1 rounded-full bg-white">
+                              <div className="h-3 flex-1 rounded-full bg-surface">
                                 <div
                                   className="h-3 rounded-full"
                                   style={{
@@ -493,12 +516,12 @@ export function ResultsExplorer({ synthetic, real }: ResultsExplorerProps) {
               </div>
             </div>
           )}
-          <div className="rounded-[24px] border border-ink/8 bg-white/90 p-5 text-sm leading-7 text-ink/72">
+          <div className="rounded-[24px] border border-ink/8 bg-surface/90 p-5 text-sm leading-7 text-ink/72">
             <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink/55">
-              Hover summary
+              {t("results.hover.title")}
             </div>
             <div className="mt-3 text-sm leading-7 text-ink/72 min-h-[1.75em]">
-              <FormatMathText text={hovered ?? "Hover a point or bar to inspect one measurement."} />
+              <FormatMathText text={hovered ?? t("results.hover.placeholder")} />
             </div>
           </div>
         </div>

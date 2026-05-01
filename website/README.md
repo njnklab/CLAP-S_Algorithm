@@ -40,12 +40,18 @@ It does **not** reframe the work as minimum dominating set, feedback vertex set,
 ```text
 src/
   app/                  Next.js app entry
-  components/           page sections and interactive demos
+  components/           shared UI plus layout shells
+    layout/             navbar, floating panels, and shells
+    ui/                 primitive cards, legends, steppers
+    views/              legacy page-level composites
+  features/             domain-specific modules (animations, results)
   data/                 website copy and toy example data
+  providers/            i18n, theme, and visualization contexts
   lib/                  CSV loading and result summarization
 data/results/           benchmark CSV files used by the explorer
 public/paper/           paper PDF and supplementary materials
-docs/                   design and content brief
+doc/                    implementation plan & change log
+docs/                   legacy design/content brief
 .github/workflows/      GitHub Pages deployment workflow
 ```
 
@@ -106,6 +112,7 @@ If you fork this repository, make sure Pages is enabled in the repository settin
 - result data used by the charts under `data/results/`
 - manuscript PDF under `public/paper/revision.pdf`
 - supplementary materials under `public/paper/supplementary-materials.pdf`
+- roadmap and change log under `doc/implementation-plan.md`
 - Chinese design/content planning document under `docs/paper-website-spec.md`
 
 ## Citation

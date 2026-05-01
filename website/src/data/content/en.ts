@@ -67,8 +67,8 @@ export const heroOptions: HeroOption[] = [
       "A duplex network can keep both minimal driver budgets fixed and still become cheaper to actuate through cross-layer reconfiguration.",
     value:
       String.raw`Each successful CLAP update removes two cross-layer conflicts and contracts the union driver set by exactly one node.`,
-    primaryCta: "View the demo",
-    secondaryCta: "Download PDF"
+    primaryCta: "Download PDF",
+    secondaryCta: "View the demo"
   }
 ];
 
@@ -218,14 +218,14 @@ export const theoryModules: TheoryModule[] = [
   },
   {
     id: "objective-equivalence",
-    title: "Why minimizing $|U|$ is the same as minimizing $\Delta$",
+    title: String.raw`Why minimizing $|U|$ is the same as minimizing $\Delta$`,
     intuition: [
       "Under fixed budgets, the total amount of driver mass across both layers is fixed. The only thing that can change is how much of that mass is shared versus split across different nodes.",
-      "Difference mass $\Delta$ counts exactly the driver nodes that are unique to one layer. Reduce those disagreements, and the union shrinks automatically."
+      String.raw`Difference mass $\Delta$ counts exactly the driver nodes that are unique to one layer. Reduce those disagreements, and the union shrinks automatically.`
     ],
     formal: [
-      "Let $DD_1 = D_1 \setminus D_2$ and $DD_2 = D_2 \setminus D_1$, and define $\Delta = |DD_1| + |DD_2|$.",
-      "Then $|U| = (k_1 + k_2 + \Delta) / 2$."
+      String.raw`Let $DD_1 = D_1 \setminus D_2$ and $DD_2 = D_2 \setminus D_1$, and define $\Delta = |DD_1| + |DD_2|$.`,
+      String.raw`Then $|U| = (k_1 + k_2 + \Delta) / 2$.`
     ],
     why:
       "This converts the engineering objective of actuator reuse into a graph-reconfiguration objective over disagreement mass.",
@@ -352,7 +352,7 @@ export const faqItems: FaqItem[] = [
       "Those optimize different control surrogates. This work remains in matching-based structural controllability, where unmatched target-side nodes of a maximum matching define the minimum driver set."
   },
   {
-    question: "Can the optimum always reach $\max(k_1, k_2)$?",
+    question: String.raw`Can the optimum always reach $\max(k_1, k_2)$?`,
     answer:
       String.raw`No. That lower bound is achievable only if the topology permits one driver set to nest completely inside the other. CLAP-S finds the true fixed-budget optimum whether or not that lower bound is attainable.`
   }
@@ -433,5 +433,5 @@ export const bibtex = `@misc{zheng_optimized_duplex_control,
   author       = {Haoyu Zheng and Xizhe Zhang},
   note         = {Manuscript under revision},
   howpublished = {Matching-based structural controllability for aligned-node duplex networks},
-  url          = {https://github.com/njnklab/CLAP-S_Algorithm}
+  url          = {https://github.com/njnklab/CLAPs-algorithm}
 }`;

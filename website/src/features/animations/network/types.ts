@@ -87,6 +87,9 @@ export interface NetworkStyleConfig {
       scale: number | "no-change";
     };
   };
+  layout: {
+    orientation: "horizontal" | "vertical";
+  };
 }
 
 export interface NetworkProps {
@@ -107,9 +110,10 @@ export interface NetworkProps {
   titleFontSize?: number;
   renderEdges?: boolean;
   exchangePresentation?: ExchangePresentation;
+  stripedNodeIds?: number[];
 }
 
-export type EdgeTuple = [number, number];
+export type EdgeTuple = readonly [number, number];
 
 export type LineGeometry = {
   x1: number;
@@ -124,9 +128,9 @@ export type ExchangePresentation = {
   active: boolean;
   phase: ExchangePhase;
   pathKey: string;
-  pathEdges: EdgeTuple[];
-  beforeMatching: EdgeTuple[];
-  afterMatching: EdgeTuple[];
+  pathEdges: readonly EdgeTuple[];
+  beforeMatching: readonly EdgeTuple[];
+  afterMatching: readonly EdgeTuple[];
   beforeDrivers: number[];
   afterDrivers: number[];
 };
@@ -134,77 +138,80 @@ export type ExchangePresentation = {
 export const DEFAULT_STYLE_CONFIG: NetworkStyleConfig = {
   nodes: {
     all: {
-      radius: 3.8,
-      strokeWidth: 0.6,
-      textFontSize: 3.8,
-      textOffset: 0.6
+      radius: APP_CONFIG.visual.network.node_radius,
+      strokeWidth: APP_CONFIG.visual.network.node_stroke_width,
+      textFontSize: APP_CONFIG.visual.network.text_size,
+      textOffset: APP_CONFIG.visual.network.text_offset
     },
     matching: {
-      strokeColor: APP_CONFIG.colors.single_layer.matched,
-      textColor: APP_CONFIG.colors.single_layer.matched,
-      fillColor: APP_CONFIG.colors.single_layer.matched,
-      fillColorOpacity: 0.08,
+      strokeColor: APP_CONFIG.colors.light.matched,
+      textColor: APP_CONFIG.colors.light.matched,
+      fillColor: APP_CONFIG.colors.light.matched,
+      fillColorOpacity: APP_CONFIG.visual.network.node_fill_opacity,
     },
     driver: {
-      strokeColor: APP_CONFIG.colors.single_layer.driver,
-      textColor: APP_CONFIG.colors.single_layer.driver,
-      fillColor: APP_CONFIG.colors.single_layer.driver,
-      fillColorOpacity: 0.08,
+      strokeColor: APP_CONFIG.colors.light.driver,
+      textColor: APP_CONFIG.colors.light.driver,
+      fillColor: APP_CONFIG.colors.light.driver,
+      fillColorOpacity: APP_CONFIG.visual.network.node_fill_opacity,
     },
     regular: {
-      strokeColor: "#16212b",
-      textColor: "#16212b",
-      fillColor: "#ffffff",
-      fillColorOpacity: 1,
+      strokeColor: APP_CONFIG.colors.light.ink,
+      textColor: APP_CONFIG.colors.light.ink,
+      fillColor: APP_CONFIG.colors.light.surface,
+      fillColorOpacity: APP_CONFIG.visual.network.node_fill_opacity,
     },
     hover: {
-      strokeColor: APP_CONFIG.visual.node_hover_color,
-      textColor: APP_CONFIG.visual.node_hover_color,
+      strokeColor: APP_CONFIG.colors.light.hover,
+      textColor: APP_CONFIG.colors.light.hover,
       fillColor: "no-change",
       fillColorOpacity: "no-change",
-      scale: 1.25,
+      scale: APP_CONFIG.visual.node_hover_scale,
     }
   },
   edges: {
     all: {
-      strokeWidth: 0.6
+      strokeWidth: APP_CONFIG.visual.network.edge_width
     },
     matching: {
-      color: APP_CONFIG.colors.single_layer.matching_edge,
+      color: APP_CONFIG.colors.light.matching_edge,
       colorOpacity: 1,
       dashed: false,
       dashArray: "none",
     },
     nonMatching: {
-      color: APP_CONFIG.colors.single_layer.non_matching_edge,
-      colorOpacity: 1,
+      color: APP_CONFIG.colors.light.non_matching_edge,
+      colorOpacity: 0.5,
       dashed: false,
       dashArray: "none",
     },
     alternativeNonMatching: {
-      color: APP_CONFIG.colors.single_layer.matching_edge,
+      color: APP_CONFIG.colors.light.alternating_edge,
       colorOpacity: 1,
       dashed: true,
-      dashArray: "2 1.5",
+      dashArray: APP_CONFIG.visual.network.dash_alt,
     },
     alternativeMatching: {
-      color: APP_CONFIG.colors.single_layer.alternating_edge,
+      color: APP_CONFIG.colors.light.matching_edge,
       colorOpacity: 1,
       dashed: true,
-      dashArray: "2 1.5",
+      dashArray: APP_CONFIG.visual.network.dash_alt,
     },
     virtual: {
-      color: "rgba(22,33,43,0.05)",
+      color: APP_CONFIG.colors.light.virtual,
       colorOpacity: 1,
       dashed: true,
-      dashArray: "2 3",
+      dashArray: APP_CONFIG.visual.network.dash_virtual,
     },
     hover: {
-      color: APP_CONFIG.visual.edge_hover_color,
+      color: APP_CONFIG.colors.light.hover,
       colorOpacity: 1,
       dashed: false,
       dashArray: "none",
-      scale: 1.5,
+      scale: APP_CONFIG.visual.edge_hover_scale,
     }
+  },
+  layout: {
+    orientation: "horizontal"
   }
 };

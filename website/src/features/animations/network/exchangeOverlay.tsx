@@ -15,13 +15,13 @@ export type ExchangeToken = {
 const edgeEq = (a: EdgeTuple, b: EdgeTuple) => a[0] === b[0] && a[1] === b[1];
 const edgeKey = (e: EdgeTuple) => `${e[0]}-${e[1]}`;
 
-const inMatching = (edge: EdgeTuple, matching: EdgeTuple[]) =>
+const inMatching = (edge: EdgeTuple, matching: readonly EdgeTuple[]) =>
     matching.some((m) => edgeEq(m, edge));
 
 export function buildStep2ExchangeTokens(
-    pathEdges: EdgeTuple[],
-    beforeMatching: EdgeTuple[],
-    afterMatching: EdgeTuple[],
+    pathEdges: readonly EdgeTuple[],
+    beforeMatching: readonly EdgeTuple[],
+    afterMatching: readonly EdgeTuple[],
     pathKey: string
 ): ExchangeToken[] {
     const beforeMatched = pathEdges.filter((e) => inMatching(e, beforeMatching));
@@ -30,21 +30,42 @@ export function buildStep2ExchangeTokens(
     const afterMatched = pathEdges.filter((e) => inMatching(e, afterMatching));
     const afterAlternating = pathEdges.filter((e) => !inMatching(e, afterMatching));
 
-    const matchedTokens = beforeMatched.map((fromEdge, i) => ({
-        id: `${pathKey}-matched-${i}`,
-        visualKind: "matched" as const,
-        fromEdge,
-        toEdge: afterMatched[i],
-    }));
+    // Robust pairing by shared vertex with one-to-one mapping
+    const matchedTokens: ExchangeToken[] = [];
+    const usedMatched = new Set<number>();
+    beforeMatched.forEach((fromEdge) => {
+        const toIdx = afterMatched.findIndex(
+            (e, i) => !usedMatched.has(i) && (e[0] === fromEdge[0] || e[1] === fromEdge[1])
+        );
+        if (toIdx > -1) {
+            usedMatched.add(toIdx);
+            matchedTokens.push({
+                id: `${pathKey}-matched-${edgeKey(fromEdge)}`,
+                visualKind: "matched" as const,
+                fromEdge,
+                toEdge: afterMatched[toIdx],
+            });
+        }
+    });
 
-    const alternatingTokens = beforeAlternating.map((fromEdge, i) => ({
-        id: `${pathKey}-alternating-${i}`,
-        visualKind: "alternating" as const,
-        fromEdge,
-        toEdge: afterAlternating[i],
-    }));
+    const alternatingTokens: ExchangeToken[] = [];
+    const usedAlt = new Set<number>();
+    beforeAlternating.forEach((fromEdge) => {
+        const toIdx = afterAlternating.findIndex(
+            (e, i) => !usedAlt.has(i) && (e[0] === fromEdge[0] || e[1] === fromEdge[1])
+        );
+        if (toIdx > -1) {
+            usedAlt.add(toIdx);
+            alternatingTokens.push({
+                id: `${pathKey}-alternating-${edgeKey(fromEdge)}`,
+                visualKind: "alternating" as const,
+                fromEdge,
+                toEdge: afterAlternating[toIdx],
+            });
+        }
+    });
 
-    return [...matchedTokens, ...alternatingTokens].filter((t) => !!t.toEdge);
+    return [...matchedTokens, ...alternatingTokens];
 }
 
 export function buildPreviewStyleMap(tokens: ExchangeToken[]) {
@@ -77,8 +98,8 @@ export function ExchangeOverlay({
 
                 const isMatched = token.visualKind === "matched";
                 const edgeStyle = isMatched 
-                  ? styleConfig.edges.alternativeNonMatching 
-                  : styleConfig.edges.alternativeMatching;
+                  ? styleConfig.edges.alternativeMatching 
+                  : styleConfig.edges.alternativeNonMatching;
 
                 const stroke = edgeStyle.color;
                 // step 2 中整条交替路径都通常保持虚线动画
@@ -87,7 +108,7 @@ export function ExchangeOverlay({
 
                 const markerEnd = directed
                     ? isMatched
-                        ? "url(#arrowhead-matched)"
+                        ? "url(#arrowhead-alt-matched)"
                         : "url(#arrowhead-alternating)"
                     : undefined;
 

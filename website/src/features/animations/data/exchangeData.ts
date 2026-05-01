@@ -24,26 +24,26 @@ export const initialMatching: [number, number][] = [[2, 1], [3, 6], [4, 5], [6, 
 export const initialDrivers = [2, 3, 4];
 
 export type ExchangeStepInfo = {
-  title: string;
-  body: string;
+  titleKey: string;
+  bodyKey: string;
 };
 
 export const exchangeSteps: ExchangeStepInfo[] = [
   {
-    title: "Initial Matching",
-    body: String.raw`We start with a maximum matching $\mathcal{M}$ of size 4. Initial drivers: $\{${initialDrivers}\}$.`,
+    titleKey: "exchange.steps.initial.title",
+    bodyKey: "exchange.steps.initial.body",
   },
   {
-    title: "Alternating Path",
-    body: String.raw`Identify an $\mathcal{M}$-alternating path $p$ representing the exchange. It starts at unmatched target $s^-=${"{s}"}^-$ and ends at matched target $t^-=${"{t}"}^-$. $p = $ ${"{path}"}`,
+    titleKey: "exchange.steps.alternating.title",
+    bodyKey: "exchange.steps.alternating.body",
   },
   {
-    title: "Symmetric Difference",
-    body: String.raw`Perform $\mathcal{M} \triangle E(p)$: toggle edge status along the path. One driver is removed, another is added.`,
+    titleKey: "exchange.steps.symmetric.title",
+    bodyKey: "exchange.steps.symmetric.body",
   },
   {
-    title: "Reconfigured Drivers",
-    body: String.raw`The driver set has been reconfigured. Node $t=${"{t}"}$ is now a driver, and $s=${"{s}"}$ is not. Driver set: $\{${"${drivers}"}$\}$. `,
+    titleKey: "exchange.steps.reconfigured.title",
+    bodyKey: "exchange.steps.reconfigured.body",
   }
 ];
 

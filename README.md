@@ -31,6 +31,7 @@ The project is organized as follows:
 │   ├── experiments.ipynb     # Jupyter notebook for running experiments
 │   ├── real_networks.ipynb   # Notebook for experiments on real-world networks
 │   └── results.ipynb         # Notebook for visualizing and analyzing results
+├── website/                  # Source code for the interactive visualization site
 ├── config.py                 # Configuration file for project settings
 ├── main.py                   # Main script to run and compare algorithms
 ├── matching.py               # Core implementation of all matching algorithms
@@ -150,3 +151,26 @@ The `scripts/` directory contains Jupyter notebooks to reproduce the experiments
 - **`experiments.ipynb`**: This notebook contains the code to run experiments on synthetic networks, varying parameters such as network size, density, and overlap. It saves the results to the `assets/result/` directory.
 - **`real_networks.ipynb`**: This notebook is dedicated to running experiments on the real-world network datasets located in `assets/net/real/`.
 - **`results.ipynb`**: Use this notebook to load the `.csv` files from the results directory and generate the figures and tables presented in the paper. It relies on `utils/plot.py` for plotting functions.
+
+## Interactive Visualization & Supplementary Site
+
+We provide an interactive web application to help visualize the CLAP-S algorithm and explore the experimental results.
+
+- **URL**: [https://njnklab.github.io/CLAPs-algorithm/](https://njnklab.github.io/CLAPs-algorithm/)
+- **Features**:
+  - **Algorithm Trace**: Step-by-step interactive execution of CLAP-S on toy duplex networks.
+  - **Structural Controllability Primer**: Visual guide to bipartite representations and driver node induction.
+  - **Exchange Theorem Explorer**: Interactive demonstration of alternating paths and matching reconfiguration.
+  - **Results Viewer**: Explore performance metrics across different synthetic and real-world benchmarks.
+  - **Multi-language Support**: Full English and Chinese versions available.
+
+The website source code is located in the `website/` directory.
+
+### Local Website Deployment
+
+To run the website locally:
+```bash
+cd website
+npm install
+npm run dev
+```

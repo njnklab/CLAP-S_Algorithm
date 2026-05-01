@@ -28,7 +28,7 @@ export function SectionShell({
         className="mx-auto max-w-7xl"
       >
         <div className="mb-10 max-w-3xl">
-          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.28em] text-layer1">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.28em] text-accent">
             {eyebrow}
           </div>
           <h2 className="text-balance font-serif text-3xl text-ink sm:text-4xl">{title}</h2>

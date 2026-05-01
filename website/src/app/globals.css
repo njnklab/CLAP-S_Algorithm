@@ -6,6 +6,23 @@
 
 :root {
   color-scheme: light;
+  /* 
+   * Global design tokens are defined in @/lib/config.ts. 
+   * Values are injected as CSS variables via ThemeProvider.
+   * Following are structural defaults for light mode to avoid hydration flash.
+   */
+  --color-ink: 22 33 43;
+  --color-mist: 238 243 245;
+  --color-paper: 251 249 243;
+  --color-surface: 255 255 255;
+  --body-bg: linear-gradient(180deg, #fbf9f3 0%, #eef3f5 100%);
+  --mesh-bg: transparent;
+  --card-shadow: none;
+}
+
+.dark {
+  color-scheme: dark;
+  /* Dark mode values are fully injected from JS */
 }
 
 * {
@@ -20,11 +37,9 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font-sans), sans-serif;
-  color: #16212b;
-  background:
-    radial-gradient(circle at top left, rgba(11, 114, 133, 0.16), transparent 26%),
-    radial-gradient(circle at top right, rgba(199, 119, 26, 0.14), transparent 22%),
-    linear-gradient(180deg, #fbf9f3 0%, #eef3f5 100%);
+  color: var(--color-ink);
+  background: var(--body-bg);
+  transition: color 0.2s ease, background 0.2s ease;
 }
 
 h1,
@@ -40,7 +55,8 @@ a {
 }
 
 ::selection {
-  background: rgba(11, 114, 133, 0.18);
+  background: rgba(250, 204, 21, 0.35);
+  color: #0f172a;
 }
 
 summary::-webkit-details-marker {

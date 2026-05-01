@@ -47,33 +47,48 @@ export const primerMatchingOptions = {
 } as const;
 
 export type DuplexState = {
-  label: string;
+  id: string;
+  labelKey: string;
+  explanationKey: string;
   d1: number[];
   d2: number[];
   clap?: string;
-  explanation: string;
 };
 
 export const unionContractionStates: DuplexState[] = [
   {
-    label: "Initial",
+    id: "initial",
+    labelKey: "union.steps.initial.label",
+    explanationKey: "union.steps.initial.explanation",
     d1: [1, 2],
     d2: [4, 5],
-    explanation:
-      "Two minimum driver sets are valid independently, but they share no nodes. The union $|U|$ is 4 even though each layer needs only 2 drivers."
   },
   {
-    label: "Reconfigured",
+    id: "reconfigured",
+    labelKey: "union.steps.reconfigured.label",
+    explanationKey: "union.steps.reconfigured.explanation",
     d1: [3, 4],
     d2: [3, 4],
-    explanation:
-      "After matching reconfiguration, both layers still use budget 2, but they now overlap completely. The union $|U|$ contracts from 4 to 2."
   }
 ];
 
+export interface ClapAlternatingPath {
+  layer: 1 | 2;
+  s: number;
+  t: number;
+  isSRelay: boolean;
+  isTRelay: boolean;
+  edges: [number, number][];
+  nodes: number[];
+}
+
 export type TraceStep = {
   id: string;
-  activePath: { layer: 1 | 2; nodes: number[] }[];
+  clap?: {
+    s: number;
+    t: number;
+    segments: ClapAlternatingPath[];
+  };
   d1: number[];
   d2: number[];
   dd1: number[];
@@ -86,69 +101,117 @@ export type TraceStep = {
 };
 
 export const toyNodePositions = [
-  { id: 1, x: 16, y: 16 },
-  { id: 2, x: 36, y: 22 },
-  { id: 3, x: 12, y: 46 },
-  { id: 4, x: 46, y: 40 },
-  { id: 5, x: 62, y: 24 },
-  { id: 6, x: 72, y: 50 },
-  { id: 7, x: 82, y: 26 },
-  { id: 8, x: 92, y: 54 },
-  { id: 9, x: 24, y: 78 }
+  { id: 1, x: 80, y: 20 },
+  { id: 2, x: 50, y: 50 },
+  { id: 3, x: 20, y: 20 },
+  { id: 4, x: 20, y: 80 },
+  { id: 5, x: 80, y: 80 },
+  { id: 6, x: 80, y: 50 },
+  { id: 7, x: 50, y: 80 },
+  { id: 8, x: 20, y: 50 },
+  { id: 9, x: 50, y: 20 }
 ];
 
 export const toyBaseEdges = {
   1: [
-    [1, 4],
-    [3, 2],
-    [4, 5],
-    [9, 6],
-    [7, 8]
+    [2, 7], [2, 9], [2, 6], [4, 7], [4, 8], [6, 1], [6, 2], [7, 4], [7, 5], [8, 2], [8, 3], [8, 4]
   ] as const,
   2: [
-    [2, 4],
-    [5, 6],
-    [6, 7]
+    [1, 9], [2, 5], [2, 6], [2, 7], [6, 1], [6, 2], [8, 2], [8, 4], [9, 3]
   ] as const
+};
+
+export const toyInitialMatchings = {
+  1: [[2, 6], [4, 8], [6, 2], [7, 5], [8, 4]] as [number, number][],
+  2: [[1, 9], [2, 5], [6, 1], [8, 2], [9, 3]] as [number, number][]
 };
 
 export const traceSteps: TraceStep[] = [
   {
     id: "start",
-    activePath: [],
-    d1: [1, 3, 5, 9],
-    d2: [4, 5, 6, 8],
+    d1: [1, 3, 7, 9],
+    d2: [4, 6, 7, 8],
     dd1: [1, 3, 9],
     dd2: [4, 6, 8],
-    cds: [5],
-    cms: [2, 7],
+    cds: [7],
+    cms: [2, 5],
     note:
-      String.raw`Initial state from the paper's toy duplex. The disagreement mass is concentrated in $DD_1 = \{1,3,9\}$ and $DD_2 = \{4,6,8\}$.`,
+      String.raw`Initial state. The drivers in $L_1$ are $\{1,3,5,9\}$ and in $L_2$ are $\{4,5,7,8\}$. Shared drivers $\{5\}$ are in $CDS$.`,
     delta: 6,
     unionSize: 7
   },
   {
     id: "p1",
-    activePath: [{ layer: 1, nodes: [1, 4] }],
-    d1: [3, 4, 5, 9],
-    d2: [4, 5, 6, 8],
+    clap: {
+      s: 1,
+      t: 4,
+      segments: [
+        {
+          layer: 1,
+          s: 1,
+          t: 4,
+          isSRelay: false,
+          isTRelay: false,
+          edges: [[6, 1], [6, 2], [8, 2], [8, 4]],
+          nodes: [1, 6, 2, 8, 4]
+        }
+      ]
+    },
+    d1: [3, 4, 7, 9],
+    d2: [4, 6, 7, 8],
     dd1: [3, 9],
     dd2: [6, 8],
-    cds: [4, 5],
-    cms: [1, 2, 7],
+    cds: [4, 7],
+    cms: [1, 2, 5],
     note:
-      String.raw`First shortest CLAP: $1 \to 4$ in layer 1. Node 1 leaves $DD_1$, node 4 leaves $DD_2$, so $\Delta$ drops by 2 and the union shrinks by 1.`,
+      String.raw`CLAP 1: $1 \gets 6 \to 2 \gets 8 \to 4$ in $L_1$. $s=1$ and $t=4$ are removed from their respective driver sets.`,
     delta: 4,
     unionSize: 6
   },
   {
     id: "p2",
-    activePath: [
-      { layer: 1, nodes: [3, 2] },
-      { layer: 2, nodes: [2, 4] },
-      { layer: 1, nodes: [4, 5] },
-      { layer: 2, nodes: [5, 6] }
-    ],
+    clap: {
+      s: 3,
+      t: 6,
+      segments: [
+        {
+          layer: 1,
+          s: 3,
+          t: 2,
+          isSRelay: false,
+          isTRelay: true,
+          edges: [[8, 3], [8, 2]],
+          nodes: [3, 8, 2]
+        },
+        {
+          layer: 2,
+          s: 2,
+          t: 4,
+          isSRelay: true,
+          isTRelay: true,
+          edges: [[8, 2], [8, 4]],
+          nodes: [2, 8, 4]
+        },
+        {
+          layer: 1,
+          s: 4,
+          t: 5,
+          isSRelay: true,
+          isTRelay: true,
+          edges: [[7, 4], [7, 5]],
+          nodes: [4, 7, 5]
+        },
+        {
+          layer: 2,
+          s: 5,
+          t: 6,
+          isSRelay: true,
+          isTRelay: false,
+          edges: [[2, 5], [2, 6]],
+          nodes: [5, 2, 6]
+        }
+      ]
+    },
     d1: [2, 5, 7, 9],
     d2: [2, 5, 7, 8],
     dd1: [9],
@@ -156,17 +219,45 @@ export const traceSteps: TraceStep[] = [
     cds: [2, 5, 7],
     cms: [1, 3, 4, 6],
     note:
-      String.raw`Second CLAP: $3 \to 2 \to 4 \to 5 \to 6$. Relays reached from layer 1 are in $CMS$, while relays reached from layer 2 are in $CDS$. Again $\Delta$ drops by 2.`,
+      String.raw`CLAP 2: Cross-layer path $3 \to 2 \to 4 \to 5 \to 6$. Node 3 is removed from $D_1$.`,
     delta: 2,
     unionSize: 5
   },
   {
     id: "p3",
-    activePath: [
-      { layer: 1, nodes: [9, 6] },
-      { layer: 2, nodes: [6, 7] },
-      { layer: 1, nodes: [7, 8] }
-    ],
+    clap: {
+      s: 9,
+      t: 8,
+      segments: [
+        {
+          layer: 1,
+          s: 9,
+          t: 6,
+          isSRelay: false,
+          isTRelay: true,
+          edges: [[2, 9], [2, 6]],
+          nodes: [9, 2, 6]
+        },
+        {
+          layer: 2,
+          s: 6,
+          t: 7,
+          isSRelay: true,
+          isTRelay: true,
+          edges: [[2, 6], [2, 7]],
+          nodes: [6, 2, 7]
+        },
+        {
+          layer: 1,
+          s: 7,
+          t: 8,
+          isSRelay: true,
+          isTRelay: false,
+          edges: [[4, 7], [4, 8]],
+          nodes: [7, 4, 8]
+        }
+      ]
+    },
     d1: [2, 5, 6, 8],
     d2: [2, 5, 6, 8],
     dd1: [],
@@ -174,85 +265,8 @@ export const traceSteps: TraceStep[] = [
     cds: [2, 5, 6, 8],
     cms: [1, 3, 4, 7, 9],
     note:
-      String.raw`Final CLAP: $9 \to 6 \to 7 \to 8$. Both difference sets vanish, $D_1$ and $D_2$ become identical, and the state is CLAP-stable.`,
+      String.raw`CLAP 3: $9 \to 6 \to 7 \to 8$. Node 9 is removed from $D_1$ and 8 is removed from $D_2$. State approaches stability.`,
     delta: 0,
     unionSize: 4
-  }
-];
-
-export type SearchFrame = {
-  id: string;
-  modeLabel: string;
-  frontier: { node: number; layer: 1 | 2 }[];
-  visited: { node: number; layer: 1 | 2 }[];
-  relays: number[];
-  target?: number;
-  queue: string[];
-  note: string;
-};
-
-export const bfsFrames: SearchFrame[] = [
-  {
-    id: "f0",
-    modeLabel: String.raw`Seed $DD_1$ as sources`,
-    frontier: [
-      { node: 3, layer: 1 },
-      { node: 3, layer: 2 }
-    ],
-    visited: [
-      { node: 3, layer: 1 },
-      { node: 3, layer: 2 }
-    ],
-    relays: [],
-    queue: ["(3, L1 next)", "(3, L2 next)"],
-    note:
-      String.raw`BFS starts from $DD_1$. The layer label means which layer will generate the next admissible segment.`
-  },
-  {
-    id: "f1",
-    modeLabel: "Expand in layer 1",
-    frontier: [{ node: 2, layer: 2 }],
-    visited: [
-      { node: 3, layer: 1 },
-      { node: 3, layer: 2 },
-      { node: 2, layer: 2 }
-    ],
-    relays: [2],
-    queue: ["(3, L2 next)", "(2, L2 next)"],
-    note:
-      String.raw`From node 3, layer 1 reaches node 2. Because the next segment must leave in layer 2, node 2 is accepted only if it lies in $CMS$.`
-  },
-  {
-    id: "f2",
-    modeLabel: "Switch and expand in layer 2",
-    frontier: [{ node: 4, layer: 1 }],
-    visited: [
-      { node: 3, layer: 1 },
-      { node: 3, layer: 2 },
-      { node: 2, layer: 2 },
-      { node: 4, layer: 1 }
-    ],
-    relays: [2, 4],
-    queue: ["(4, L1 next)"],
-    note:
-      String.raw`Layer 2 pulls disagreement from node 4. Because the next step must leave in layer 1, node 4 is admissible only if it lies in $CDS$.`
-  },
-  {
-    id: "f3",
-    modeLabel: "Continue until target",
-    frontier: [{ node: 6, layer: 2 }],
-    visited: [
-      { node: 3, layer: 1 },
-      { node: 3, layer: 2 },
-      { node: 2, layer: 2 },
-      { node: 4, layer: 1 },
-      { node: 5, layer: 2 },
-      { node: 6, layer: 2 }
-    ],
-    relays: [2, 4, 5],
-    target: 6,
-    queue: [],
-    note:
-      String.raw`Once $DD_2$ is reached, predecessor pointers reconstruct the shortest CLAP: $3 \to 2 \to 4 \to 5 \to 6$.`
   }
 ];

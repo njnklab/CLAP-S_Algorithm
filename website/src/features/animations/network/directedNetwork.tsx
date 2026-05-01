@@ -13,7 +13,8 @@ function edgeEq(a: EdgeTuple, b: EdgeTuple) {
 function getDirectedEdgeGeometry(
   edge: EdgeTuple,
   nodes: NetworkProps["nodes"],
-  nodeRadius: number
+  nodeRadius: number,
+  allEdges?: readonly EdgeTuple[]
 ): LineGeometry | null {
   const [from, to] = edge;
   const nodeFrom = nodes.find((n) => n.id === from);
@@ -29,11 +30,16 @@ function getDirectedEdgeGeometry(
   const startPadding = nodeRadius + 1.2;
   const endPadding = nodeRadius + 4.5;
 
+  const hasReverse = allEdges?.some((e) => e[0] === edge[1] && e[1] === edge[0]);
+  const offset = hasReverse ? 1.6 : 0;
+  const normalX = Math.cos(angle + Math.PI / 2) * offset;
+  const normalY = Math.sin(angle + Math.PI / 2) * offset;
+
   return {
-    x1: fromX + startPadding * Math.cos(angle),
-    y1: fromY + startPadding * Math.sin(angle),
-    x2: toX - endPadding * Math.cos(angle),
-    y2: toY - endPadding * Math.sin(angle),
+    x1: fromX + startPadding * Math.cos(angle) + normalX,
+    y1: fromY + startPadding * Math.sin(angle) + normalY,
+    x2: toX - endPadding * Math.cos(angle) + normalX,
+    y2: toY - endPadding * Math.sin(angle) + normalY,
   };
 }
 
@@ -52,9 +58,10 @@ export function DirectedNetwork({
   forceShowMatching,
   title,
   titleFontSize,
-  renderEdges = true
+  renderEdges = true,
+  stripedNodeIds
 }: NetworkProps) {
-  const isFinalResult = stage === 4 || forceShowMatching;
+  const isFinalResult = stage >= 3 || forceShowMatching;
   
   const { 
     radius: nodeRadius, 
@@ -106,9 +113,135 @@ export function DirectedNetwork({
   const previewStyleMap = useMemo(() => {
     return buildPreviewStyleMap(exchangeTokens);
   }, [exchangeTokens]);
+  const stripedNodeSet = useMemo(() => new Set(stripedNodeIds || []), [stripedNodeIds]);
+  const stripeDefs: React.ReactNode[] = [];
+  const registeredPatterns = new Set<string>();
+  const registerStripePattern = (patternId: string, stripeColor: string, stripeOpacity: number) => {
+    if (registeredPatterns.has(patternId)) return;
+    stripeDefs.push(
+      <pattern
+        id={patternId}
+        key={patternId}
+        patternUnits="userSpaceOnUse"
+        width="0.8"
+        height="0.8"
+        patternTransform="rotate(45)"
+      >
+        <rect width="0.8" height="0.8" fill="transparent" />
+        <rect width="0.4" height="0.8" fill={stripeColor} fillOpacity={stripeOpacity} />
+      </pattern>
+    );
+    registeredPatterns.add(patternId);
+  };
+
+  const nodeElements = nodes.map((node) => {
+    const isDriver = isFinalResult && nodeDrivers.includes(node.id);
+    const isMatchedAsTarget = isFinalResult && nodeMatching.some(([_, to]) => to === node.id);
+    const isHovered = hoveredNode?.id === node.id;
+
+    let fillColor: string;
+    let strokeColor: string;
+    let textColor: string;
+    let fillColorOpacity: number;
+    let currentRadius = nodeRadius;
+
+    if (isFinalResult && isMatchedAsTarget) {
+      fillColor = styleConfig.nodes.matching.fillColor;
+      strokeColor = styleConfig.nodes.matching.strokeColor;
+      textColor = styleConfig.nodes.matching.textColor;
+      fillColorOpacity = styleConfig.nodes.matching.fillColorOpacity;
+    } else if (isFinalResult && isDriver) {
+      fillColor = styleConfig.nodes.driver.fillColor;
+      strokeColor = styleConfig.nodes.driver.strokeColor;
+      textColor = styleConfig.nodes.driver.textColor;
+      fillColorOpacity = styleConfig.nodes.driver.fillColorOpacity;
+    } else {
+      fillColor = styleConfig.nodes.regular.fillColor;
+      strokeColor = styleConfig.nodes.regular.strokeColor;
+      textColor = styleConfig.nodes.regular.textColor;
+      fillColorOpacity = styleConfig.nodes.regular.fillColorOpacity;
+    }
+
+    if (isHovered) {
+      if (styleConfig.nodes.hover.fillColor !== "no-change") fillColor = styleConfig.nodes.hover.fillColor;
+      if (styleConfig.nodes.hover.strokeColor !== "no-change") strokeColor = styleConfig.nodes.hover.strokeColor;
+      if (styleConfig.nodes.hover.textColor !== "no-change") textColor = styleConfig.nodes.hover.textColor;
+      if (styleConfig.nodes.hover.fillColorOpacity !== "no-change") fillColorOpacity = styleConfig.nodes.hover.fillColorOpacity as number;
+      if (styleConfig.nodes.hover.scale !== "no-change") currentRadius *= styleConfig.nodes.hover.scale;
+    }
+
+    const stripePatternId = stripedNodeSet.has(node.id) ? `stripe-node-${title?.replace(/\s+/g, '-')}-${node.id}` : null;
+    if (stripePatternId) {
+      registerStripePattern(stripePatternId, strokeColor, 0.45);
+    }
+
+    return (
+      <motion.g
+        key={`node-directed-${node.id}`}
+        layoutId={stage === 0 ? `node-group-left-${node.id}` : `node-group-right-${node.id}`}
+        layout
+        initial={{ x: node.origX, y: node.origY, opacity: 0 }}
+        animate={{
+          x: node.origX,
+          y: node.origY,
+          opacity: 1
+        }}
+        exit={{ x: node.origX, y: node.origY, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 60, damping: 15 }}
+      >
+        <motion.circle
+          cx={0}
+          cy={0}
+          r={currentRadius}
+          initial={false}
+          animate={{
+            fill: fillColor,
+            stroke: strokeColor,
+            fillOpacity: fillColorOpacity,
+          }}
+          transition={{ duration: isHovered ? 0 : 0.5 }}
+          strokeWidth={nodeStrokeWidth}
+          className="transition-all duration-0 cursor-pointer"
+          onMouseEnter={() => setHoveredNode({ id: node.id, side: "both" })}
+          onMouseLeave={() => setHoveredNode(null)}
+        />
+        {stripePatternId ? (
+          <motion.circle
+            cx={0}
+            cy={0}
+            r={currentRadius}
+            initial={false}
+            animate={{ opacity: 1 }}
+            fill={`url(#${stripePatternId})`}
+            stroke="none"
+            pointerEvents="none"
+          />
+        ) : null}
+
+        <motion.text
+          x={0}
+          y={textOffset}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className="font-semibold select-none pointer-events-none"
+          initial={false}
+          animate={{
+            fill: textColor,
+          }}
+          transition={{ duration: isHovered ? 0 : 0.5 }}
+          style={{
+            fontSize: `${textFontSize}px`
+          }}
+        >
+          {node.id}
+        </motion.text>
+      </motion.g>
+    );
+  });
 
   return (
     <g className="directed-network">
+      {stripeDefs.length > 0 && <defs>{stripeDefs}</defs>}
       {title && (
         <text
           x={50}
@@ -128,19 +261,10 @@ export function DirectedNetwork({
         const nodeTo = nodes.find((n) => n.id === to);
         if (!nodeFrom || !nodeTo) return null;
 
-        const fromX = nodeFrom.origX;
-        const fromY = nodeFrom.origY;
-        const toX = nodeTo.origX;
-        const toY = nodeTo.origY;
+        const geometry = getDirectedEdgeGeometry([from, to], nodes, nodeRadius, edgesToRender);
+        if (!geometry) return null;
 
-        const angle = Math.atan2(toY - fromY, toX - fromX);
-        const startPadding = nodeRadius + 1.2;
-        const endPadding = nodeRadius + 4.5;
-
-        const targetX1 = fromX + startPadding * Math.cos(angle);
-        const targetY1 = fromY + startPadding * Math.sin(angle);
-        const targetX2 = toX - endPadding * Math.cos(angle);
-        const targetY2 = toY - endPadding * Math.sin(angle);
+        const { x1: targetX1, y1: targetY1, x2: targetX2, y2: targetY2 } = geometry;
 
         const edgeKey = `${from}-${to}`;
 
@@ -167,7 +291,8 @@ export function DirectedNetwork({
             : (hoveredNode.side === "source" ? from === hoveredNode.id : to === hoveredNode.id)
         );
 
-        const pathKind = previewKind || (isHighlighted ? (isMatchedOnCurrentSemantic ? "matched" : "alternating") : undefined);
+        const pathKind =
+          previewKind || (isHighlighted ? (isMatchedOnCurrentSemantic ? "matched" : "alternating") : undefined);
 
         let strokeColor: string;
         let strokeWidth = edgeStrokeWidth;
@@ -177,13 +302,13 @@ export function DirectedNetwork({
 
         // Base styles
         if (pathKind === "matched") {
-          const style = styleConfig.edges.alternativeNonMatching;
+          const style = styleConfig.edges.alternativeMatching;
           strokeColor = style.color;
           strokeDasharray = style.dashed ? style.dashArray : "none";
           opacity = style.colorOpacity;
-          markerEnd = "url(#arrowhead-matched)";
+          markerEnd = "url(#arrowhead-alt-matched)";
         } else if (pathKind === "alternating") {
-          const style = styleConfig.edges.alternativeMatching;
+          const style = styleConfig.edges.alternativeNonMatching;
           strokeColor = style.color;
           strokeDasharray = style.dashed ? style.dashArray : "none";
           opacity = style.colorOpacity;
@@ -193,16 +318,11 @@ export function DirectedNetwork({
           strokeDasharray = styleConfig.edges.matching.dashed ? styleConfig.edges.matching.dashArray : "none";
           opacity = styleConfig.edges.matching.colorOpacity;
           markerEnd = "url(#arrowhead-matched)";
-        } else if (isFinalResult) {
+        } else {
           strokeColor = styleConfig.edges.nonMatching.color;
           strokeDasharray = styleConfig.edges.nonMatching.dashed ? styleConfig.edges.nonMatching.dashArray : "none";
           opacity = styleConfig.edges.nonMatching.colorOpacity;
           markerEnd = "url(#arrowhead-regular)";
-        } else {
-          strokeColor = "#9fb0bb"; // Default gray for initial states before matching shown
-          strokeDasharray = "none";
-          opacity = 1;
-          markerEnd = "url(#arrowhead)";
         }
 
         // Hover overrides
@@ -243,102 +363,14 @@ export function DirectedNetwork({
       {exchangePresentation?.active && exchangePresentation.phase === "animating" && (
         <ExchangeOverlay
           tokens={exchangeTokens}
-          getGeometry={(edge) => getDirectedEdgeGeometry(edge, nodes, nodeRadius)}
+          getGeometry={(edge) => getDirectedEdgeGeometry(edge, nodes, nodeRadius, edgesToRender)}
           edgeStrokeWidth={edgeStrokeWidth}
           directed
           styleConfig={styleConfig}
         />
       )}
 
-      {nodes.map((node) => {
-        const isDriver = isFinalResult && nodeDrivers.includes(node.id);
-        const isMatchedAsTarget = isFinalResult && nodeMatching.some(([_, to]) => to === node.id);
-        const isHovered = hoveredNode?.id === node.id;
-
-        let fillColor: string;
-        let strokeColor: string;
-        let textColor: string;
-        let fillColorOpacity: number;
-        let currentRadius = nodeRadius;
-
-        // Base styles
-        if (isFinalResult && isMatchedAsTarget) {
-          fillColor = styleConfig.nodes.matching.fillColor;
-          strokeColor = styleConfig.nodes.matching.strokeColor;
-          textColor = styleConfig.nodes.matching.textColor;
-          fillColorOpacity = styleConfig.nodes.matching.fillColorOpacity;
-        } else if (isFinalResult && isDriver) {
-          fillColor = styleConfig.nodes.driver.fillColor;
-          strokeColor = styleConfig.nodes.driver.strokeColor;
-          textColor = styleConfig.nodes.driver.textColor;
-          fillColorOpacity = styleConfig.nodes.driver.fillColorOpacity;
-        } else {
-          fillColor = styleConfig.nodes.regular.fillColor;
-          strokeColor = styleConfig.nodes.regular.strokeColor;
-          textColor = styleConfig.nodes.regular.textColor;
-          fillColorOpacity = styleConfig.nodes.regular.fillColorOpacity;
-        }
-
-        // Hover overrides
-        if (isHovered) {
-          if (styleConfig.nodes.hover.fillColor !== "no-change") fillColor = styleConfig.nodes.hover.fillColor;
-          if (styleConfig.nodes.hover.strokeColor !== "no-change") strokeColor = styleConfig.nodes.hover.strokeColor;
-          if (styleConfig.nodes.hover.textColor !== "no-change") textColor = styleConfig.nodes.hover.textColor;
-          if (styleConfig.nodes.hover.fillColorOpacity !== "no-change") fillColorOpacity = styleConfig.nodes.hover.fillColorOpacity as number;
-          if (styleConfig.nodes.hover.scale !== "no-change") currentRadius *= styleConfig.nodes.hover.scale;
-        }
-
-        return (
-          <motion.g
-            key={`node-directed-${node.id}`}
-            layoutId={stage === 0 ? `node-group-left-${node.id}` : `node-group-right-${node.id}`}
-            layout
-            initial={{ x: node.origX, y: node.origY, opacity: 0 }}
-            animate={{
-              x: node.origX,
-              y: node.origY,
-              opacity: 1
-            }}
-            exit={{ x: node.origX, y: node.origY, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 60, damping: 15 }}
-          >
-            <motion.circle
-              cx={0}
-              cy={0}
-              r={currentRadius}
-              initial={false}
-              animate={{
-                fill: fillColor,
-                stroke: strokeColor,
-                fillOpacity: fillColorOpacity,
-              }}
-              transition={{ duration: isHovered ? 0 : 0.5 }}
-              strokeWidth={nodeStrokeWidth}
-              className="transition-all duration-0 cursor-pointer"
-              onMouseEnter={() => setHoveredNode({ id: node.id, side: "both" })}
-              onMouseLeave={() => setHoveredNode(null)}
-            />
-
-            <motion.text
-              x={0}
-              y={textOffset}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              className="font-semibold select-none pointer-events-none"
-              initial={false}
-              animate={{
-                fill: textColor,
-              }}
-              transition={{ duration: isHovered ? 0 : 0.5 }}
-              style={{
-                fontSize: `${textFontSize}px`
-              }}
-            >
-              {node.id}
-            </motion.text>
-          </motion.g>
-        );
-      })}
+      {nodeElements}
     </g>
   );
 }

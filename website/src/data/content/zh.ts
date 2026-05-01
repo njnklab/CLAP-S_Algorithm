@@ -31,8 +31,8 @@ export const heroOptions: HeroOption[] = [
       "双构网络可以通过跨层重新配置，在保持两层最小驱动预算不变的情况下，降低整体驱动成本。",
     value:
       String.raw`每次成功的 CLAP 更新都会消除两个跨层冲突，并将驱动节点并集收缩正好一个节点。`,
-    primaryCta: "观看演示",
-    secondaryCta: "下载 PDF"
+    primaryCta: "下载 PDF",
+    secondaryCta: "观看演示"
   }
 ];
 
@@ -47,6 +47,16 @@ export const navItems = [
   { id: "results", label: "实验结果" },
   { id: "resources", label: "资源下载" }
 ];
+
+export const settings = {
+  nodeHoverScale: "Node Hover Scale",
+  edgeHoverScale: "Edge Hover Scale",
+  layout: "Layout",
+  orientation: "Bipartite Orientation",
+  horizontal: "Horizontal",
+  vertical: "Vertical",
+  reset: "Reset",
+};
 
 export const sectionCopy: SectionCopy[] = [
   {
@@ -118,7 +128,7 @@ export const sectionCopy: SectionCopy[] = [
     paragraphs: [
       String.raw`本文将节点划分为四个集合：$CDS$, $CMS$, $DD_1$, 和 $DD_2$。差值节点是跨层冗余存在的地方。中继节点必须在 $CMS$ 和 $CDS$ 之间交替，以便路径传输失配感而不产生新的冲突。`,
       String.raw`CLAP 增益定理表明，应用有效的 CLAP 可保持 $k_1$ 和 $k_2$ 不变，使 $\Delta$ 减少 2，从而并集 $|U|$ 减少 1。这使得每次成功的路径查找都成为目标函数的精确下降步骤。`,
-      "“CLAP-or-Optimal”定理起到了全局最优证明的作用。一个配置在可行空间内是全局最优的，当且仅当它是 CLAP 稳定的（即不存在可行的 CLAP）。"
+      "“CLAP-or-Optimal” 定理说明：当不存在可行的 CLAP 时，系统就已经处于固定预算下的全局最优；反之，只要仍能找到 CLAP，就必然还能改进。"
     ]
   },
   {
@@ -183,14 +193,14 @@ export const theoryModules: TheoryModule[] = [
   },
   {
     id: "objective-equivalence",
-    title: "为什么最小化并集 $|U|$ 等同于最小化差异质量 $\Delta$",
+    title: String.raw`为什么最小化并集 $|U|$ 等同于最小化差异质量 $\Delta$`,
     intuition: [
       "在固定预算下，两层的驱动器总质量是固定的。唯一能改变的是多少质量是共享的，多少是分散在不同节点上的。",
-      "差异质量 $\Delta$ 精确计算了单层特有的驱动节点。减少这些失配，并集规模就会自动收缩。"
+      String.raw`差异质量 $\Delta$ 精确计算了单层特有的驱动节点。减少这些失配，并集规模就会自动收缩。`
     ],
     formal: [
-      "设 $DD_1 = D_1 \setminus D_2$ 且 $DD_2 = D_2 \setminus D_1$，定义 $\Delta = |DD_1| + |DD_2|$。",
-      "则 $|U| = (k_1 + k_2 + \Delta) / 2$。"
+      String.raw`设 $DD_1 = D_1 \setminus D_2$ 且 $DD_2 = D_2 \setminus D_1$，定义 $\Delta = |DD_1| + |DD_2|$。`,
+      String.raw`则 $|U| = (k_1 + k_2 + \Delta) / 2$。`
     ],
     why:
       "这将执行器复用的工程目标转化为对失配质量的图重构目标。",
@@ -229,7 +239,7 @@ export const theoryModules: TheoryModule[] = [
   },
   {
     id: "clap-optimal",
-    title: "CLAP-or-Optimal 定理",
+    title: "CLAP-or-Optimal 定理：不存在 CLAP 时即达到最优",
     intuition: [
       String.raw`如果存在更好的固定预算配置，那么当前匹配与更优匹配之间的差值必包含一个从 $DD_1$ 到 $DD_2$ 的路径状结构。`,
       "而该结构正是论文中所定义的 CLAP。"
@@ -385,7 +395,7 @@ export const glossaryItems: GlossaryItem[] = [
       "不存在可行 CLAP 的状态。在本文的可行空间内，这意味着并集不可能再进一步收缩。"
   },
   {
-    term: "CLAP-or-Optimal",
+    term: "CLAP-or-Optimal（不存在 CLAP 时即达到最优）",
     meaning:
       "指出可行配置当且仅当具有 CLAP 稳定性时才在全局最优的定理。"
   }
@@ -398,5 +408,5 @@ export const bibtex = `@misc{zheng_optimized_duplex_control,
   author       = {Haoyu Zheng and Xizhe Zhang},
   note         = {Manuscript under revision},
   howpublished = {Matching-based structural controllability for aligned-node duplex networks},
-  url          = {https://github.com/njnklab/CLAP-S_Algorithm}
+  url          = {https://github.com/njnklab/CLAPs-algorithm}
 }`;

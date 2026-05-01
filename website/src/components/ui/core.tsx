@@ -2,14 +2,16 @@
 
 import { motion } from "framer-motion";
 import { BlockMath, InlineMath } from "react-katex";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/providers/i18n-provider";
 
-export function SafeInlineMath({ math }: { math: string }) {
+export function SafeInlineMath({ math, as = "span" }: { math: string; as?: any }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <span suppressHydrationWarning className="opacity-0">{`$${math}$`}</span>;
+  const Component = as;
+  if (!mounted) return <Component suppressHydrationWarning className="opacity-0">{`$${math}$`}</Component>;
   return <InlineMath math={math} />;
 }
 
@@ -21,23 +23,38 @@ export function SafeBlockMath({ math }: { math: string }) {
 }
 
 
-export function FormatMathText({ text, children }: { text?: string; children?: React.ReactNode }) {
+type FormatMathTextProps<T extends keyof React.JSX.IntrinsicElements = "span"> = {
+  text?: string;
+  children?: React.ReactNode;
+  as?: T;
+} & Omit<React.JSX.IntrinsicElements[T], "children">;
+
+export function FormatMathText<T extends keyof React.JSX.IntrinsicElements = "span">({
+  text,
+  children,
+  as,
+  ...rest
+}: FormatMathTextProps<T>) {
   const content = text || (typeof children === "string" ? children : "");
   if (!content) return children || null;
 
   // Supports multi-line math blocks and treats \ as literal if passed via JSX children
   const parts = content.split(/(\$[\s\S]*?\$)/g);
-  
+  const Component = (as || "span") as any;
+  const InlineWrapper =
+    as === "tspan" || as === "text" ? "tspan" : "span";
+
   return (
-    <span suppressHydrationWarning>
+    <Component suppressHydrationWarning {...(rest as any)}>
       {parts.map((part, index) => {
         if (!part) return null;
         if (part.startsWith("$") && part.endsWith("$")) {
-          return <SafeInlineMath key={index} math={part.slice(1, -1)} />;
+          return <SafeInlineMath key={index} math={part.slice(1, -1)} as={InlineWrapper} />;
         }
-        return <span key={index}>{part}</span>;
+        const Wrapper = InlineWrapper as any;
+        return <Wrapper key={index}>{part}</Wrapper>;
       })}
-    </span>
+    </Component>
   );
 }
 
@@ -55,7 +72,7 @@ export function Card({
     <div
       {...props}
       className={cn(
-        "rounded-[28px] border border-white/80 bg-white/88 p-6 shadow-card backdrop-blur-sm",
+        "rounded-[28px] border border-white/80 bg-surface/88 p-6 shadow-card backdrop-blur-sm dark:border-white/5 dark:bg-slate-900/80",
         className
       )}
     >
@@ -77,20 +94,24 @@ export function StatCard({
   color?: string;
   hint?: string;
 }) {
-  const toneClass =
+  const toneStyle =
     tone === "layer1"
-      ? "from-layer1/15 to-layer1/5"
+      ? { background: "linear-gradient(to bottom right, rgba(var(--color-layer1), 0.15), rgba(var(--color-layer1), 0.05))" }
       : tone === "layer2"
-        ? "from-layer2/15 to-layer2/5"
-        : "from-ink/10 to-white";
+        ? { background: "linear-gradient(to bottom right, rgba(var(--color-layer2), 0.15), rgba(var(--color-layer2), 0.05))" }
+        : { background: "linear-gradient(to bottom right, rgba(var(--color-ink), 0.1), rgba(var(--color-surface), 0.95))" };
 
-  const customStyle = color ? {
-    background: `linear-gradient(to bottom right, ${color}1a, white)`
-  } : {};
+  const customStyle = color
+    ? {
+      background: `linear-gradient(to bottom right, ${color}1a, rgba(var(--color-surface), 0.95))`
+    }
+    : toneStyle;
 
   return (
     <div
-      className={cn("rounded-3xl border border-ink/8 p-4", !color && "bg-gradient-to-br", !color && toneClass)}
+      className={cn(
+        "rounded-3xl border border-ink/8 p-4 dark:border-white/10 dark:bg-slate-900/60"
+      )}
       style={customStyle}
     >
       <div className="text-xs uppercase tracking-[0.2em] text-ink/55">
@@ -134,7 +155,7 @@ export function EquationCard({
 
 export function FormulaPill({ math }: { math: string }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-ink/10 bg-white px-4 py-2 text-sm text-ink shadow-sm">
+    <span className="inline-flex items-center rounded-full border border-ink/10 bg-surface px-4 py-2 text-sm text-ink shadow-sm">
       <SafeInlineMath math={math} />
     </span>
   );
@@ -218,6 +239,8 @@ export function Stepper({
   onPrevious: () => void;
   onReset: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
@@ -225,24 +248,24 @@ export function Stepper({
         onClick={onPrevious}
         className="rounded-full border border-ink/10 px-4 py-2 text-sm text-ink transition hover:border-ink/20 hover:bg-ink/5"
       >
-        Previous
+        {t("ui.stepper.previous")}
       </button>
       <button
         type="button"
         onClick={onNext}
-        className="rounded-full bg-ink px-4 py-2 text-sm text-white transition hover:bg-ink/90"
+        className="rounded-full bg-ink px-4 py-2 text-sm text-white transition hover:bg-ink/90 dark:text-slate-900"
       >
-        Next
+        {t("ui.stepper.next")}
       </button>
       <button
         type="button"
         onClick={onReset}
         className="rounded-full border border-ink/10 px-4 py-2 text-sm text-ink transition hover:border-ink/20 hover:bg-ink/5"
       >
-        Reset
+        {t("ui.stepper.reset")}
       </button>
       <div className="ml-auto text-sm text-ink/60">
-        Step {current + 1} / {total}
+        {t("ui.stepper.progress", { current: current + 1, total })}
       </div>
     </div>
   );
@@ -256,7 +279,7 @@ export function SurfaceTitle({
   body?: string;
 }) {
   return (
-    <div className="mb-5">
+    <div>
       <div className="text-lg font-semibold text-ink">
         <FormatMathText text={title} />
       </div>

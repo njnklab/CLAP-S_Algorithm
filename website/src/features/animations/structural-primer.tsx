@@ -7,40 +7,54 @@ import { primerEdges, primerMatchingOptions, primerNetworkNodes } from "@/featur
 import { cn } from "@/lib/utils";
 
 import { APP_CONFIG } from "@/lib/config";
+import { useVisualizationSettings } from "@/providers/visualization-settings-provider";
+import { useI18n } from "@/providers/i18n-provider";
 import { Card, FormatMathText, KeyNode, KeyEdge, Stepper, SurfaceTitle } from "@/components/ui/core";
 import { DirectedNetwork } from "./network/directedNetwork";
 import { BipartiteNetwork } from "./network/bipartiteNetwork";
-import { DEFAULT_STYLE_CONFIG } from "./network/types";
-
-const stages = [
-  {
-    title: "Directed network",
-    body: "Start with a directed layer. Control analysis begins from topology, not from a chosen driver list."
-  },
-  {
-    title: "Bipartite representation",
-    body: "Each node is duplicated into a source-side copy and a target-side copy. Every directed edge becomes a bipartite edge."
-  },
-  {
-    title: "Maximum matching",
-    body: "A maximum matching covers as many target-side copies as possible without conflict."
-  },
-  {
-    title: "Driver nodes",
-    body: "Unmatched target-side copies determine the minimum driver set. Driver nodes are induced by the matching structure."
-  },
-  {
-    title: "Final control result",
-    body: String.raw`Projecting the bipartite result back to the original network: $B \to G$. We obtain a minimum set of driver nodes and a maximum matching of edges.`
-  }
-];
 
 export function StructuralPrimer() {
   const [stage, setStage] = useState(0);
   const [matchingCase, setMatchingCase] = useState<keyof typeof primerMatchingOptions>("A");
   const [hoveredNode, setHoveredNode] = useState<{ id: number; side: "source" | "target" | "both" } | null>(null);
-  const [layout, setLayout] = useState<"vertical" | "horizontal">("horizontal");
   const [playing, setPlaying] = useState(false);
+  const { styleConfig } = useVisualizationSettings();
+  const layout = styleConfig.layout.orientation;
+  const { t } = useI18n();
+  const stages = useMemo(
+    () => [
+      {
+        title: t("primer.stage.directed.title"),
+        body: t("primer.stage.directed.body")
+      },
+      {
+        title: t("primer.stage.bipartite.title"),
+        body: t("primer.stage.bipartite.body")
+      },
+      {
+        title: t("primer.stage.matching.title"),
+        body: t("primer.stage.matching.body")
+      },
+      {
+        title: t("primer.stage.drivers.title"),
+        body: t("primer.stage.drivers.body")
+      },
+      {
+        title: t("primer.stage.final.title"),
+        body: t("primer.stage.final.body")
+      }
+    ],
+    [t]
+  );
+
+  const matchingEdgeColor = styleConfig.edges.matching.color;
+  const nonMatchingEdgeColor = styleConfig.edges.nonMatching.color;
+  const altMatchedEdgeColor = styleConfig.edges.alternativeMatching.color;
+  const alternatingEdgeColor = styleConfig.edges.alternativeNonMatching.color;
+  const hoverEdgeColor =
+    styleConfig.edges.hover.color === "no-change" ? styleConfig.edges.matching.color : styleConfig.edges.hover.color;
+  const driverNodeColor = styleConfig.nodes.driver.strokeColor;
+  const matchedNodeColor = styleConfig.nodes.matching.strokeColor;
 
   useEffect(() => {
     if (!playing) return undefined;
@@ -55,7 +69,7 @@ export function StructuralPrimer() {
     }, 3000);
 
     return () => window.clearInterval(timer);
-  }, [playing]);
+  }, [playing, stages.length]);
 
   const neighbors = useMemo(() => {
     if (!hoveredNode) return [];
@@ -75,72 +89,95 @@ export function StructuralPrimer() {
 
   const bipartitePositions = useMemo(() => {
     const sortedNodes = [...primerNetworkNodes].sort((a, b) => a.id - b.id);
-
-    // Circular layout for Directed Network stage
-    const centerX = 50;
-    const centerY = 50;
-    const radius = 35;
+    const centerX = APP_CONFIG.visual.network.layout.center;
+    const centerY = APP_CONFIG.visual.network.layout.center;
+    const radius = APP_CONFIG.visual.network.layout.radius;
+    const margin = APP_CONFIG.visual.network.layout.margin;
+    const span = APP_CONFIG.visual.network.layout.span;
+    const ySource = APP_CONFIG.visual.network.layout.y_source;
+    const yTarget = APP_CONFIG.visual.network.layout.y_target;
 
     return sortedNodes.map((node, index) => {
-      // Distribute nodes evenly on a circle
       const angle = (index * 2 * Math.PI) / sortedNodes.length - Math.PI / 2;
       const origX = centerX + radius * Math.cos(angle);
       const origY = centerY + radius * Math.sin(angle);
 
-      if (layout === "horizontal") {
-        // Horizontal layout: Source top row, Target bottom row
-        const x = 16 + (index * 70) / (sortedNodes.length - 1);
-        return {
-          id: node.id,
-          origX,
-          origY,
-          left: { x, y: 30 },
-          right: { x, y: 70 }
-        };
-      } else {
-        // Vertical layout: Source left column, Target right column
-        const y = 16 + (index * 70) / (sortedNodes.length - 1);
-        return {
-          id: node.id,
-          origX,
-          origY,
-          left: { x: 20, y },
-          right: { x: 80, y }
-        };
-      }
+      const x = margin + (index * span) / (sortedNodes.length - 1);
+
+      const isHorizontalFlow = layout === "horizontal";
+
+      // Vertical layout tweaks: smaller node spacing (vertical spread), larger source/target distance (horizontal spread)
+      const verticalY = APP_CONFIG.visual.network.layout.y_margin + (index * APP_CONFIG.visual.network.layout.y_span) / (sortedNodes.length - 1);
+      const verticalXSource = APP_CONFIG.visual.network.layout.x_source;
+      const verticalXTarget = APP_CONFIG.visual.network.layout.x_target;
+
+      return {
+        id: node.id,
+        origX,
+        origY,
+        left: isHorizontalFlow ? { x, y: ySource } : { x: verticalXSource, y: verticalY },
+        right: isHorizontalFlow ? { x, y: yTarget } : { x: verticalXTarget, y: verticalY }
+      };
     });
   }, [layout]);
 
   return (
     <Card className="overflow-hidden">
-      <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div>
-          <SurfaceTitle
-            title="Animation B · Single-layer structural controllability primer"
-            body="Watch how a directed network maps to its bipartite representation, where matching determines the driver set."
-          />
-          <div className="rounded-[26px] border border-ink/8 bg-white p-4 relative">
+      <div className="space-y-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <SurfaceTitle title={t("primer.animation.title")} body={t("primer.animation.body")} />
+          <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                if (!playing && stage === stages.length - 1) {
+                  setStage(0);
+                }
+                setPlaying((current) => !current);
+              }}
+              className="rounded-full border border-ink/10 px-4 py-2 text-sm text-ink transition hover:bg-ink/5 outline-none"
+            >
+              {playing ? t("controls.pause") : t("controls.play")}
+            </button>
+            <Stepper
+              current={stage}
+              total={stages.length}
+              onNext={() => setStage((current) => Math.min(current + 1, stages.length - 1))}
+              onPrevious={() => setStage((current) => Math.max(current - 1, 0))}
+              onReset={() => {
+                setPlaying(false);
+                setStage(0);
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr] items-start">
+          <div className="rounded-[26px] border border-ink/8 bg-surface p-4 relative">
             <svg viewBox="0 0 100 100" className="w-full">
               <defs>
-                <marker
-                  id="arrowhead"
-                  markerWidth="4"
-                  markerHeight="3"
-                  refX="0.1"
-                  refY="1.5"
-                  orient="auto"
-                >
-                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill="#9fb0bb" />
+                <marker id="arrowhead" markerWidth={APP_CONFIG.visual.network.arrow_size.width} markerHeight={APP_CONFIG.visual.network.arrow_size.height} refX="0.1" refY="1.5" orient="auto">
+                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={nonMatchingEdgeColor} />
                 </marker>
                 <marker
                   id="arrowhead-matched"
+                  markerWidth={APP_CONFIG.visual.network.arrow_size.width}
+                  markerHeight={APP_CONFIG.visual.network.arrow_size.height}
+                  refX="0.1"
+                  refY="1.5"
+                  orient="auto"
+                >
+                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={matchingEdgeColor} />
+                </marker>
+                <marker
+                  id="arrowhead-alt-matched"
                   markerWidth="4"
                   markerHeight="3"
                   refX="0.1"
                   refY="1.5"
                   orient="auto"
                 >
-                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={APP_CONFIG.colors.single_layer.matching_edge} />
+                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={altMatchedEdgeColor} />
                 </marker>
                 <marker
                   id="arrowhead-regular"
@@ -150,7 +187,7 @@ export function StructuralPrimer() {
                   refY="1.5"
                   orient="auto"
                 >
-                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={APP_CONFIG.colors.single_layer.non_matching_edge} />
+                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={nonMatchingEdgeColor} />
                 </marker>
                 <marker
                   id="arrowhead-hover"
@@ -160,7 +197,7 @@ export function StructuralPrimer() {
                   refY="1.5"
                   orient="auto"
                 >
-                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={APP_CONFIG.visual.edge_hover_color} />
+                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={hoverEdgeColor} />
                 </marker>
                 <marker
                   id="arrowhead-alternating"
@@ -170,7 +207,7 @@ export function StructuralPrimer() {
                   refY="1.5"
                   orient="auto"
                 >
-                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={APP_CONFIG.colors.single_layer.alternating_edge} />
+                  <path d="M 0 0 L 4 1.5 L 0 3 z" fill={alternatingEdgeColor} />
                 </marker>
               </defs>
 
@@ -190,13 +227,13 @@ export function StructuralPrimer() {
                   const y2 = isDirectedView ? nodeTo.origY : nodeTo.right.y;
 
                   const angle = Math.atan2(y2 - y1, x2 - x1);
-                  const nodeRadius = DEFAULT_STYLE_CONFIG.nodes.all.radius;
-                  const edgeStrokeWidth = DEFAULT_STYLE_CONFIG.edges.all.strokeWidth;
+                  const nodeRadius = styleConfig.nodes.all.radius;
+                  const edgeStrokeWidth = styleConfig.edges.all.strokeWidth;
 
-                  const startPadding = nodeRadius + 1.2;
+                  const startPadding = nodeRadius + APP_CONFIG.visual.network.edge_padding;
                   const endPadding = isDirectedView
-                    ? nodeRadius + 4.5
-                    : nodeRadius + 1.2;
+                    ? nodeRadius + APP_CONFIG.visual.network.edge_padding_directed
+                    : nodeRadius + APP_CONFIG.visual.network.edge_padding;
 
                   const targetX1 = x1 + startPadding * Math.cos(angle);
                   const targetY1 = y1 + startPadding * Math.sin(angle);
@@ -212,20 +249,24 @@ export function StructuralPrimer() {
                       : (hoveredNode.side === "source" ? from === hoveredNode.id : to === hoveredNode.id)
                   );
 
-                  let strokeColor = "#9fb0bb";
+                  let strokeColor = nonMatchingEdgeColor;
                   let visualStrokeWidth = edgeStrokeWidth;
                   let markerEnd = isDirectedView ? "url(#arrowhead)" : "none";
+                  let opacity = styleConfig.edges.nonMatching.colorOpacity;
 
                   if (isHovered) {
-                    strokeColor = APP_CONFIG.visual.edge_hover_color;
-                    visualStrokeWidth = edgeStrokeWidth * 1.5;
+                    strokeColor = hoverEdgeColor;
+                    visualStrokeWidth = edgeStrokeWidth * APP_CONFIG.visual.network.hover_multiplier;
+                    opacity = styleConfig.edges.hover.colorOpacity === "no-change"
+                      ? styleConfig.edges.matching.colorOpacity
+                      : styleConfig.edges.hover.colorOpacity;
                     if (isDirectedView) markerEnd = "url(#arrowhead-hover)";
                   } else if (isMatched) {
-                    strokeColor = APP_CONFIG.colors.single_layer.matching_edge;
-                    visualStrokeWidth = edgeStrokeWidth * 1.2;
+                    strokeColor = matchingEdgeColor;
+                    visualStrokeWidth = edgeStrokeWidth * APP_CONFIG.visual.network.match_multiplier;
+                    opacity = styleConfig.edges.matching.colorOpacity;
                     if (isDirectedView) markerEnd = "url(#arrowhead-matched)";
                   } else if (stage === 4) {
-                    strokeColor = APP_CONFIG.colors.single_layer.non_matching_edge;
                     if (isDirectedView) markerEnd = "url(#arrowhead-regular)";
                   }
 
@@ -241,7 +282,7 @@ export function StructuralPrimer() {
                         y2: targetY2,
                         stroke: strokeColor,
                         strokeWidth: visualStrokeWidth,
-                        opacity: 1
+                        opacity: opacity
                       }}
                       transition={{
                         stroke: { duration: isHovered ? 0 : 0.3 },
@@ -261,7 +302,8 @@ export function StructuralPrimer() {
                     hoveredNode={hoveredNode}
                     setHoveredNode={setHoveredNode}
                     renderEdges={false}
-                    title="Directed View"
+                    styleConfig={styleConfig}
+                    title={t("network.title.directed")}
                     titleFontSize={4.5}
                   />
                 ) : (
@@ -274,117 +316,99 @@ export function StructuralPrimer() {
                     setHoveredNode={setHoveredNode}
                     layout={layout}
                     renderEdges={false}
-                    title="Bipartite View"
+                    styleConfig={styleConfig}
+                    title={t("network.title.bipartite")}
                     titleFontSize={4.5}
                   />
                 )}
               </LayoutGroup>
             </svg>
           </div>
-        </div>
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                if (!playing && stage === stages.length - 1) {
-                  setStage(0);
-                }
-                setPlaying((current) => !current);
-              }}
-              className="rounded-full border border-ink/10 px-4 py-2 text-sm text-ink transition hover:bg-ink/5 outline-none"
-            >
-              {playing ? "Pause" : "Play"}
-            </button>
-            <Stepper
-              current={stage}
-              total={stages.length}
-              onNext={() => setStage((current) => Math.min(current + 1, stages.length - 1))}
-              onPrevious={() => setStage((current) => Math.max(current - 1, 0))}
-              onReset={() => {
-                setPlaying(false);
-                setStage(0);
-              }}
-            />
-          </div>
-          <div className="rounded-[26px] border border-ink/8 bg-white/90 p-5">
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/55">
-              Current frame
-            </div>
-            <div className="mt-3 text-2xl font-semibold text-ink">{stages[stage].title}</div>
-            <div className="mt-3 text-sm leading-7 text-ink/72">
-              <FormatMathText text={stages[stage].body} />
-            </div>
-            <div className="mt-6 pt-5 mx-3 border-t border-ink/5">
-              <div className="flex flex-wrap mb-4 gap-x-8 gap-y-4">
-                <KeyEdge color={APP_CONFIG.colors.single_layer.matching_edge} label="Matched edge" />
-                <KeyEdge color={APP_CONFIG.colors.single_layer.non_matching_edge} label="Unmatched edge" />
+          <div className="space-y-3">
+            <div className="rounded-[26px] border border-ink/8 bg-surface/90 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-ink/55">
+                {t("primer.currentFrame")}
               </div>
-              <div className="flex flex-wrap gap-x-8 gap-y-4">
-                <KeyNode color={APP_CONFIG.colors.single_layer.driver} label="Driver node (Unmatched)" />
-                <KeyNode color={APP_CONFIG.colors.single_layer.matched} label="Matched node" />
+              <div className="mt-3 text-2xl font-semibold text-ink">{stages[stage].title}</div>
+              <div className="mt-3 text-sm leading-7 text-ink/72">
+                <FormatMathText text={stages[stage].body} />
+              </div>
+              <div className="mt-6 pt-5 mx-3 border-t border-ink/5">
+                <div className="flex flex-wrap mb-4 gap-x-8 gap-y-4">
+                  <KeyEdge color={matchingEdgeColor} label={t("primer.legend.matchedEdge")} />
+                  <KeyEdge color={nonMatchingEdgeColor} label={t("primer.legend.unmatchedEdge")} />
+                </div>
+                <div className="flex flex-wrap gap-x-8 gap-y-4">
+                  <KeyNode color={driverNodeColor} label={t("primer.legend.driver")} />
+                  <KeyNode color={matchedNodeColor} label={t("primer.legend.matchedNode")} />
+                </div>
               </div>
             </div>
-          </div>
-          <div className="rounded-[26px] border border-ink/8 bg-white/90 p-5">
-            {stage >= 2 && (
-              <>
-                <p className="mt-2 text-[13px] text-ink/75 leading-relaxed bg-white/40 p-3 rounded-xl border border-ink/5">
-                  Note: The maximum matching is not unique. In this example, switching the matching path might influence the control trajectory while maintaining the same driver set size.
-                </p>
+            <div className="rounded-[26px] border border-ink/8 bg-surface/90 p-5">
+              {stage >= 2 && (
+                <>
+                  <p className="mt-2 text-[13px] text-ink/75 leading-relaxed bg-surface/40 p-3 rounded-xl border border-ink/5">
+                    <FormatMathText text={t("primer.note")} />
+                  </p>
 
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-[12px] font-semibold text-ink/60 uppercase tracking-wider">Alt Matching:</span>
-                  <div className="flex bg-mist/40 p-1 rounded-lg border border-ink/5">
-                    {(["A", "B"] as const).map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => setMatchingCase(opt)}
-                        className={cn(
-                          "px-3 py-1 text-[12px] rounded-md transition-all font-medium",
-                          matchingCase === opt
-                            ? "bg-white text-ink shadow-sm"
-                            : "text-ink/60 hover:text-ink hover:bg-white/30"
-                        )}
-                      >
-                        {primerMatchingOptions[opt].label}
-                      </button>
-                    ))}
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-[12px] font-semibold text-ink/60 uppercase tracking-wider">
+                      {t("primer.altMatching")}
+                    </span>
+                    <div className="flex bg-mist/40 p-1 rounded-lg border border-ink/5">
+                      {(["A", "B"] as const).map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={() => setMatchingCase(opt)}
+                          className={cn(
+                            "px-3 py-1 text-[12px] rounded-md transition-all font-medium",
+                            matchingCase === opt
+                              ? "bg-surface text-ink shadow-sm"
+                              : "text-ink/60 hover:text-ink hover:bg-surface/30"
+                          )}
+                        >
+                          {primerMatchingOptions[opt].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <p className="mt-2">
+                <FormatMathText text={t("primer.driverNote")} />
+              </p>
+
+              <p className="mt-2 mb-4 pb-4 border-b border-ink/5 text-[12px] text-ink/65 italic leading-relaxed">
+                <strong className="mr-1">{t("primer.constraints.title")}</strong>
+                <FormatMathText text={t("primer.constraints.body")} />
+              </p>
+
+              {hoveredNode ? (
+                <div>
+                  <p className="font-semibold text-ink">
+                    {t("primer.focusLabel", {
+                      id: hoveredNode.id,
+                      suffix: hoveredNode.side === "source" ? "+" : hoveredNode.side === "target" ? "-" : ""
+                    })}
+                  </p>
+                  <div className="mt-2 text-[13px] text-ink/80 flex flex-wrap gap-2">
+                    <span>{t("primer.neighbors.label")}</span>
+                    {neighbors.length > 0 ? (
+                      neighbors.map((n, i) => (
+                        <span key={i} className="px-1.5 bg-surface/50 rounded border border-ink/5 text-ink text-[12px]">
+                          {n}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="italic">{t("primer.neighbors.none")}</span>
+                    )}
                   </div>
                 </div>
-              </>
-            )}
-
-            <p className="mt-2">
-              Driver nodes are not chosen by hand. They are induced by whichever target-side copies
-              remain unmatched in a maximum matching.
-            </p>
-
-            <p className="mt-2 mb-4 pb-4 border-b border-ink/5 text-[12px] text-ink/65 italic leading-relaxed">
-              <strong>Matching Constraints:</strong> In a bipartite matching, each source copy (<FormatMathText text="+" />) can have at most one outgoing matched edge, and each target copy (<FormatMathText text="-" />) can have at most one incoming matched edge.
-            </p>
-
-            {hoveredNode ? (
-              <div>
-                <p className="font-semibold text-ink">
-                  Focus: Node {hoveredNode.id}{hoveredNode.side === "source" ? "+" : hoveredNode.side === "target" ? "-" : ""}
-                </p>
-                <div className="mt-2 text-[13px] text-ink/80 flex flex-wrap gap-2">
-                  <span>Connected neighbors:</span>
-                  {neighbors.length > 0 ? (
-                    neighbors.map((n, i) => (
-                      <span key={i} className="px-1.5 bg-white/50 rounded border border-ink/5 text-ink text-[12px]">
-                        {n}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="italic">No direct neighbors</span>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p>Hover over a node to see its structural neighbors.</p>
-            )}
+              ) : (
+                <p>{t("primer.hoverHint")}</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

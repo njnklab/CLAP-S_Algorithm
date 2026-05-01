@@ -31,6 +31,7 @@
 │   ├── experiments.ipynb     # 用于运行实验的Jupyter notebook
 │   ├── real_networks.ipynb   # 用于在真实世界网络上进行实验的notebook
 │   └── results.ipynb         # 用于可视化和分析结果的notebook
+├── website/                  # 交互式可视化网站源代码
 ├── config.py                 # 项目设置的配置文件
 ├── main.py                   # 运行和比较算法的主脚本
 ├── matching.py               # 所有匹配算法的核心实现
@@ -150,3 +151,26 @@ glde_matching.CLAPG()
 - **`experiments.ipynb`**: 该notebook包含在合成网络上运行实验的代码，可变参数包括网络大小、密度和重叠度。它将结果保存到`assets/result/`目录。
 - **`real_networks.ipynb`**: 该notebook专门用于在`assets/net/real/`中的真实世界网络数据集上运行实验。
 - **`results.ipynb`**: 使用此notebook加载结果目录中的`.csv`文件，并生成论文中呈现的图表。它依赖于`utils/plot.py`中的绘图函数。
+
+## 交互式可视化与补充网站
+
+我们提供了一个交互式 Web 应用程序，以帮助可视化 CLAP-S 算法并探索实验结果。
+
+- **访问地址**: [https://njnklab.github.io/CLAPs-algorithm/](https://njnklab.github.io/CLAPs-algorithm/)
+- **核心功能**:
+  - **算法追踪**: 在示例双层网络上分步交互演示 CLAP-S 的执行过程。
+  - **结构可控性入门**: 二分图表示和驱动节点诱导的可视化指南。
+  - **交换定理探索**: 交替路径和匹配重新配置的交互式演示。
+  - **结果查看器**: 探索在不同合成和真实世界基准测试中的性能指标。
+  - **多语言支持**: 提供完整的英文和中文版本。
+
+网站源代码位于 `website/` 目录中。
+
+### 本地网站部署
+
+在本地运行网站：
+```bash
+cd website
+npm install
+npm run dev
+```
