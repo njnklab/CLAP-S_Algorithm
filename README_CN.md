@@ -15,14 +15,17 @@
 ```
 .
 ├── assets/
+│   ├── illustrator/          # 论文插图与图表的Illustrator源文件 (.ai)
 │   ├── log/                  # 用于调试和跟踪的日志文件
 │   ├── net/                  # 网络数据集
 │   │   ├── real/             # 真实世界网络数据集
 │   │   ├── synthetic/        # 模型生成的合成网络
 │   │   └── test/             # 用于快速实验的测试网络
-│   └── result/               # 实验结果
-│       ├── figure/           # 用于可视化的图表
-│       └── *.csv             # CSV格式的原始结果
+│   ├── paper/                # 论文PDF文件（正文及补充材料）
+│   ├── result/               # 实验结果
+│   │   ├── figure/           # 用于可视化的图表
+│   │   └── *.csv             # CSV格式的原始结果
+│   └── net.tar.xz            # 压缩的合成网络及真实网络数据集
 ├── utils/
 │   ├── generator.py          # 生成合成网络（ER、BA、SF）
 │   ├── plot.py               # 用于绘图和可视化的辅助函数
@@ -97,6 +100,8 @@ from utils.utils import read_network
 graph = read_network(file_path="assets/net/real/SomeNet.txt", n=100)
 ```
 
+> **数据集压缩包：** 实验中使用的完整合成网络和真实世界网络已作为压缩包提供在 `assets/net.tar.xz` 中。在运行大规模实验前，请先将其解压至 `assets/net/` 目录。
+> 
 > **注意：** `assets/net/test`目录包含我们论文中使用的真实世界网络数据的副本，以及具有不同节点数和平均度的各种合成测试网络。我们鼓励您使用这些文件进行测试。例如：
 > ```bash
 > python main.py --files assets/net/test/Cannes_MT.txt assets/net/test/Cannes_RT.txt -n 36
