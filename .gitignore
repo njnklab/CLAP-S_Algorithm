@@ -2,7 +2,6 @@ assets/net/deprecated/
 assets/net/synthetic/
 assets/net/real/
 
-.vscode/
 
 ########################################
 # 操作系统通用
@@ -61,8 +60,9 @@ pip-wheel-metadata/
 
 
 ########################################
-# .NET / Visual Studio
+# IDEs (VS Code, Visual Studio, JetBrains)
 ########################################
+.vscode/
 .vs/
 *.user
 *.suo

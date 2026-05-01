@@ -1,6 +1,0 @@
-{
-    "explorer.excludeGitIgnore": false,
-    "search.exclude": {
-        "**/assets/net/synthetic": true
-    }
-}
