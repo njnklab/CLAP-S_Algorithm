@@ -148,11 +148,33 @@ The `main.py` script provides a template for comparing the performance and execu
 
 ## Experiment Reproduction and Visualization
 
-The `scripts/` directory contains Jupyter notebooks to reproduce the experiments from our paper and visualize the results.
+The `scripts/` directory contains Jupyter notebooks and scripts to reproduce the experiments from our paper and visualize the results.
 
+### Jupyter Notebooks
 - **`experiments.ipynb`**: This notebook contains the code to run experiments on synthetic networks, varying parameters such as network size, density, and overlap. It saves the results to the `assets/result/` directory.
 - **`real_networks.ipynb`**: This notebook is dedicated to running experiments on the real-world network datasets located in `assets/net/real/`.
 - **`results.ipynb`**: Use this notebook to load the `.csv` files from the results directory and generate the figures and tables presented in the paper. It relies on `utils/plot.py` for plotting functions.
+
+### Command-line Scripts
+We also provide command-line scripts for running memory-tracked and large-scale experiments. These scripts use `tracemalloc` to record precise peak memory usage.
+
+- **`run_one_real_network.py`**: Runs CLAP-S, RSU, CLAP-G, or ILP on a single real multiplex network (one layer pair) and records time and peak memory.
+  ```bash
+  python scripts/run_one_real_network.py --net Arabidopsis --layer1 direct_interaction --layer2 physical_association --algo all
+  ```
+- **`run_real_networks.sh`**: A shell wrapper that iterates over all real network layer pairs defined in **`real_pairs.csv`** and executes `run_one_real_network.py` to generate the complete real network benchmark.
+  ```bash
+  bash scripts/run_real_networks.sh
+  ```
+- **`run_one_memory_usage.py`**: Runs a single synthetic network memory/time measurement for the CLAP-S algorithm.
+  ```bash
+  python scripts/run_one_memory_usage.py --type ER --n 1000 --k 4.0 --seq 0
+  ```
+- **`run_memory_usage.sh`**: A shell wrapper that loops through various network types and sizes to collect comprehensive memory usage data using `run_one_memory_usage.py`.
+  ```bash
+  bash scripts/run_memory_usage.sh
+  ```
+- **`real_pairs.csv`**: A data file specifying the pairs of layers to be analyzed for each real-world network dataset.
 
 ## Interactive Visualization & Supplementary Site
 

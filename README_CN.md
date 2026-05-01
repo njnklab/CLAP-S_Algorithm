@@ -151,11 +151,33 @@ glde_matching.CLAPG()
 
 ## 实验复现和可视化
 
-`scripts/`目录包含Jupyter notebooks，用于复现我们论文中的实验并可视化结果。
+`scripts/`目录包含用于复现我们论文中的实验并可视化结果的Jupyter notebooks和命令行脚本。
 
+### Jupyter Notebooks
 - **`experiments.ipynb`**: 该notebook包含在合成网络上运行实验的代码，可变参数包括网络大小、密度和重叠度。它将结果保存到`assets/result/`目录。
 - **`real_networks.ipynb`**: 该notebook专门用于在`assets/net/real/`中的真实世界网络数据集上运行实验。
 - **`results.ipynb`**: 使用此notebook加载结果目录中的`.csv`文件，并生成论文中呈现的图表。它依赖于`utils/plot.py`中的绘图函数。
+
+### 命令行脚本
+我们还提供了命令行脚本，用于运行带内存追踪的大规模实验。这些脚本使用 `tracemalloc` 记录精确的内存消耗峰值。
+
+- **`run_one_real_network.py`**: 在单个真实双层网络（特定两个网络层）上运行 CLAP-S、RSU、CLAP-G 或 ILP，并记录执行时间和内存峰值。
+  ```bash
+  python scripts/run_one_real_network.py --net Arabidopsis --layer1 direct_interaction --layer2 physical_association --algo all
+  ```
+- **`run_real_networks.sh`**: Shell 包装脚本，它会遍历 **`real_pairs.csv`** 中定义的所有真实网络层对，并调用 `run_one_real_network.py` 生成完整的真实网络评估结果。
+  ```bash
+  bash scripts/run_real_networks.sh
+  ```
+- **`run_one_memory_usage.py`**: 运行并测量单个合成网络中 CLAP-S 算法的执行时间与内存消耗。
+  ```bash
+  python scripts/run_one_memory_usage.py --type ER --n 1000 --k 4.0 --seq 0
+  ```
+- **`run_memory_usage.sh`**: Shell 包装脚本，循环测试不同类型的网络和节点规模，利用 `run_one_memory_usage.py` 收集全面的内存使用数据。
+  ```bash
+  bash scripts/run_memory_usage.sh
+  ```
+- **`real_pairs.csv`**: 数据文件，指定了真实世界网络数据集中需要分析的网络层对。
 
 ## 交互式可视化与补充网站
 
